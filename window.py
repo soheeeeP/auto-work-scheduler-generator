@@ -2,7 +2,8 @@ from tkinter import *
 
 
 class Window(object):
-    def __init__(self):
+    def __init__(self, db):
+        self.db = db
         self._window = None
         self._menu = None
 

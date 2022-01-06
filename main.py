@@ -10,7 +10,7 @@ if __name__ == '__main__':
     database = DataBase()
     database.db = 'test.db'     # TODO: db명 환경변수로 분리
 
-    root = Window()
+    root = Window(db=database)
     root.start_window()
 
     sys.exit(app.exec_())
