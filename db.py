@@ -33,8 +33,8 @@ class DataBase(object):
         return self._query
 
     @query.setter
-    def query(self, query):
-        self._query = query
+    def query(self, sql):
+        self._query = sql
 
     def _terminate_db_connection(self):
         if self._db.open():
@@ -49,7 +49,7 @@ class DataBase(object):
                 id INTEGER primary key autoincrement ,
                 rank VARCHAR(30) NOT NULL ,
                 name VARCHAR(30) NOT NULL ,
-                status VARCHAR(30) default 'Default' ,
+                status VARCHAR(30) default 'Default'
             )
             """
         )
@@ -62,7 +62,7 @@ class DataBase(object):
                 id INTEGER primary key autoincrement ,
                 date DATE NOT NULL ,
                 time VARCHAR(30) NOT NULL ,
-                worker_id INTEGER REFERENCES user(id)
+                worker_id INTEGER REFERENCES users(id)
             )
             """
         )
@@ -70,13 +70,13 @@ class DataBase(object):
     def _insert_dummy_user_data_in_db(self, rank, name, status):
         # work = lambda x: False if x.upper == 'X' else True
         self._query.exec_(
-            f"""insert into user (rank, name, status) values ('{rank}', '{name}', '{status}')"""
+            f"""insert into users (rank, name, status) values ('{rank}', '{name}', '{status}')"""
         )
 
     # TODO: query문 class method로 추가하기
 
     def select_all_user(self):
-        self._query.exec_("select * from user")
-        while self.query.next():
-            print(f'{self.query.value(0)}: {self.query.value(1)} | {self.query.value(2)} | {self.query.value(3)}')
+        self._query.exec_("select * from users")
+        while self._query.next():
+            print(f'{self._query.value(0)}: {self._query.value(1)} | {self._query.value(2)} | {self._query.value(3)}')
 
