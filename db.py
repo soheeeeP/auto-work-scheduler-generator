@@ -3,23 +3,20 @@ from PyQt5.QtSql import QSqlDatabase, QSqlQuery, QSqlQueryModel
 
 class DataBase(object):
     def __init__(self):
-        self.db = QSqlDatabase.addDatabase("QSQLITE")
-        self.query = QSqlQuery()
-
-        self._set_db_connection()
-
-        self._create_user_table_in_db()
-        self._insert_dummy_user_data_in_db('병장', '아무개', 'Default')
-        self._insert_dummy_user_data_in_db('상병', '홍길동', 'Senior')
-        self._insert_dummy_user_data_in_db('이병', '안철수', 'Junior')
-
-        self.print_sql_query()
+        self._db = None
+        self._query = QSqlQuery()
 
     def __del__(self):
         self._terminate_db_connection()
 
-    def _set_db_connection(self):
-        self.db.setDatabaseName('test.db')
+    @property
+    def db(self):
+        return self._db
+
+    @db.setter
+    def db(self, db_name):
+        self.db = QSqlDatabase.addDatabase("QSQLITE")
+        self.db.setDatabaseName(db_name)
         if not self.db.open():
             raise EnvironmentError('database connection failed')
 
