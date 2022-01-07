@@ -1,128 +1,169 @@
-from tkinter import *
+from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction, QWidget, QSpinBox, QLabel, QVBoxLayout, QPushButton
 
 
 # TODO: Window, Menu, Frame 별도의 class로 분리하기
-class Window(object):
+class MainWindow(QMainWindow):
     def __init__(self, db):
-        self.db = db
-        self._window = None
-        self._menu = None
+        super().__init__()
+        self._db = db
 
         self.width = 720
         self.height = 540
+        self.center = QDesktopWidget().availableGeometry().center()
+        self.rectangle = self.frameGeometry()
 
-    def __del__(self):
-        if self._window:
-            self._window.quit()
-            self._window.destroy()
+        # 화면 크기, 위치 설정
+        self.setGeometry(0, 0, self.width, self.height)
+        self.rectangle.moveCenter(self.center)
+        self.move(self.rectangle.topLeft())
 
-    @property
-    def window(self):
-        return self._window
+        self.setWindowTitle('Auto work-scheduler generator for Army Soldiers')
 
-    @window.setter
-    def window(self, title):
-        self._window = Tk()
-        self._window.title(title)
+        # 메뉴 생성
+        menu_bar = self.menuBar()
 
-        start_w = int(self._window.winfo_screenwidth() - self.width) / 2
-        start_h = int(self._window.winfo_screenheight() - self.height) / 2
-        self._window.geometry(f"{self.width}x{self.height}+{int(start_w)}+{int(start_h)}")
-        self._window.resizable(False, False)
+        setting_menu = menu_bar.addMenu("설정")
 
-    @property
-    def menu(self):
-        return self._menu
+        workerPerTimeMenu = QAction("시간당 근무 인원수 설정", self)
+        setting_menu.addAction(workerPerTimeMenu)
+        workerPerTimeMenu.triggered.connect(self.worker_per_time_frame)
 
-    @menu.setter
-    def menu(self, window):
-        self._menu = Menu(window)
+        assistantModeMenu = QAction("사수/부사수 옵션 설정", self)
+        setting_menu.addAction(assistantModeMenu)
+        assistantModeMenu.triggered.connect(self.assistant_mode_frame)
 
-    def start_window(self):
-        self.window = 'Auto work-scheduler generator for Army Soldiers'
-        self.menu = self._window
+        workShiftTermMenu = QAction("근무교대 텀 설정", self)
+        setting_menu.addAction(workShiftTermMenu)
+        workShiftTermMenu.triggered.connect(self.workshift_term_frame)
 
-        self.create_window_menu_bar()
+        db_menu = menu_bar.addMenu("DB 생성/조회")
+        createDBMenu = QAction("인원DB 등록", self)
+        editDBMenu = QAction("인원DB 수정", self)
+        viewDBMenu = QAction("인원DB 조회", self)
+        db_menu.addAction(createDBMenu)
+        db_menu.addAction(editDBMenu)
+        db_menu.addAction(viewDBMenu)
 
-        self._window.config(menu=self._menu)
-        self._window.mainloop()
+        option_menu = menu_bar.addMenu("추가사항")
+        outsideTheBarrackMenu = QAction("영외인원 등록 및 수정", self)
+        exceptionMenu = QAction("열외인원 등록 및 수정", self)
+        specialRelationMenu = QAction("특수관계 등록 및 수정", self)
 
-    def main_option_menu(self) -> Menu:
-        menu = Menu(self._menu, tearoff=0)
-        menu.add_command(label='시간당 근무 인원수 설정', command=lambda: self.worker_per_term_frame())
-        menu.add_separator()
-        menu.add_command(label='사수/부사수 옵션 설정', command=lambda: self.assistant_mode_on_off_frame())
-        menu.add_separator()
-        menu.add_command(label='근무 교대 텀 설정', command=lambda: self.work_shift_term_frame())
-        return menu
+        option_menu.addAction(outsideTheBarrackMenu)
+        option_menu.addAction(exceptionMenu)
+        option_menu.addAction(specialRelationMenu)
 
-    def db_menu(self) -> Menu:
-        menu = Menu(self._menu, tearoff=0)
-        menu.add_command(label='인원DB 등록')
-        menu.add_command(label='인원DB 수정')
-        menu.add_command(label='인원DB 조회')
-        menu.add_separator()
-        menu.add_command(label='인원 특수 관계도 조회')
-        return menu
+        save_menu = menu_bar.addMenu("저장")
+        saveWorkRoutineCellMenu = QAction("근무표 저장", self)
+        saveWorkCountCellMenu = QAction("근무카운트 저장", self)
 
-    def exceptional_option_menu(self) -> Menu:
-        menu = Menu(self._menu, tearoff=0)
-        menu.add_command(label='영외인원 등록 및 수정')
-        menu.add_command(label='열외인원 등록 및 수정')
-        menu.add_separator()
-        menu.add_command(label='특수 관계 등록 및 수정')
-        return menu
+        save_menu.addAction(saveWorkRoutineCellMenu)
+        save_menu.addAction(saveWorkCountCellMenu)
 
-    def save_menu(self) -> Menu:
-        menu = Menu(self._menu, tearoff=0)
-        menu.add_command(label='근무표 저장')
-        menu.add_command(label='근무카운트 저장')
-        return menu
+        self.show()
 
-    def create_window_menu_bar(self):
-        self._menu.add_cascade(label='설정', menu=self.main_option_menu())
-        self._menu.add_cascade(label='DB 생성/조회', menu=self.db_menu())
-        self._menu.add_cascade(label='추가사항', menu=self.exceptional_option_menu())
-        self._menu.add_cascade(label='저장', menu=self.save_menu())
+    def worker_per_time_frame(self):
+        SubWindow(self, 'worker', '시간당 근무 인원수 설정하기\n(0 ~ 3 사이의 수를 입력하세요)', self._db, (self._db.term_count, 0, 3, 1)).show()
 
-    def spinbox_value_validator(self, value):
-        print(value)
-        if value.isdigit() and 0 <= int(value) <= 5:
-            return True
-        return False
-
-    def spinbox_frame(self, message, min_range, max_range):
-        frame = Toplevel()
-        frame.geometry(
-            f"{int(self.width / 2)}x{int(self.height / 2)}"
-            f"+{self._window.winfo_x() + int(self.width / 4)}+{self._window.winfo_y() + int(self.height / 4)}"
-        )
-        label = Label(frame, text=message, height=4).pack()
-
-        validate_command = (frame.register(self.spinbox_value_validator), "%P")
-        spinbox = Spinbox(
-            frame,
-            from_=min_range,
-            to=max_range,
-            validate='all',
-            validatecommand=validate_command
-        )
-        spinbox.pack()
-
-        # TODO: db연동하여 입력받은 옵션값 저장하기
-        Button(frame, text='저장하기', command=frame.destroy).pack()
-
-    def radiobutton_frame(self):
+    def assistant_mode_frame(self):
         pass
 
-    def worker_per_term_frame(self):
-        # TODO: spinbox frame에 default로 db의 worker_per_term값이 뜨도록 설정
-        self.spinbox_frame(message="시간당 근무 인원 수(0 ~ 5)를 입력해주세요", min_range=0, max_range=5)
+    def workshift_term_frame(self):
+        SubWindow(self, 'workshift', '근무교대 텀 설정하기\n(0 ~ 24 사이의 수를 입력하세요)', self._db, (self._db.worker_per_term, 0, 24, 1)).show()
 
-    def assistant_mode_on_off_frame(self):
-        # TODO: radio frame에 default로 db의 assistant_mode가 체크되어 있도록 설정
-        self.radiobutton_frame()
 
-    def work_shift_term_frame(self):
-        # TODO: spinbox frame에 default로 db의 term_count값이 뜨도록 설정
-        self.spinbox_frame(message="근무 교대 횟수(0 ~ 24)를 입력해주세요", min_range=0, max_range=24)
+class SubWindow(QMainWindow):
+    def __init__(self, parent=None, mode=None, message=None, db=None, values=None):
+        super(SubWindow, self).__init__(parent)
+        self.mode = mode
+        self.db = db
+        self.width = 240
+        self.height = 180
+        self.center = QDesktopWidget().availableGeometry().center()
+        self.rectangle = self.frameGeometry()
+
+        # 화면 크기, 위치 설정
+        self.setGeometry(0, 0, self.width, self.height)
+        self.rectangle.moveCenter(self.center)
+        self.move(self.rectangle.topLeft())
+
+        # values = (default, min, max, step)
+        self.setCentralWidget(SpinboxWidget(self, mode, message, db, values))
+
+
+class SpinboxWidget(QWidget):
+    def __init__(self, parent=None, mode=None, message=None, db=None, values=None):
+        super(SpinboxWidget, self).__init__(parent)
+        self.mode = mode
+        self.db = db
+        self.message = message
+        self.values = values
+
+        self._spinbox = None
+        self._label_title = None
+        self._button = None
+
+        self.init_widget()
+
+    @property
+    def spinbox(self):
+        return self._spinbox
+
+    @spinbox.setter
+    def spinbox(self, values):
+        default_value, min_value, max_value, step = values
+
+        self._spinbox = QSpinBox()
+        self._spinbox.setRange(min_value, max_value)
+        self._spinbox.setSingleStep(step)
+        self._spinbox.setValue(default_value)
+
+    @property
+    def label_title(self):
+        return self._label_title
+
+    @label_title.setter
+    def label_title(self, message):
+        self._label_title = QLabel(message)
+
+    @property
+    def button(self):
+        return self._button
+
+    @button.setter
+    def button(self, value):
+        self._button = QPushButton(value)
+
+    def save_new_value_in_db(self):
+        print(f'save: {self._spinbox.value()}')
+        # todo: term_count와 worker_per_term에 @property 적용하기
+        if self.mode == 'worker':
+            self.db.term_count = self._spinbox.value()
+        elif self.mode == 'workshift':
+            self.db.worker_per_term = self._spinbox.value()
+
+    def init_widget(self):
+        self.spinbox = self.values
+        self.label_title = self.message
+        self.button = '저장하기'
+
+        self._button.clicked.connect(self.save_new_value_in_db)
+
+        vbox = QVBoxLayout()
+        vbox.addWidget(self._label_title)
+        vbox.addWidget(self._spinbox)
+        vbox.addWidget(self._button)
+        vbox.addStretch()
+
+        self.setLayout(vbox)
+
+        # self.setWindowTitle(self.message)
+        # TODO: window 위치 조정하기
+        self.setGeometry(300, 300, 300, 200)
+        self.show()
+
+
+class RadioButtonWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        pass
