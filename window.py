@@ -1,4 +1,6 @@
-from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction, QWidget, QSpinBox, QLabel, QVBoxLayout, QPushButton
+from PyQt5.QtWidgets import \
+    QMainWindow, QDesktopWidget, QAction, QWidget, QSpinBox, \
+    QLabel, QVBoxLayout, QPushButton, QRadioButton
 
 
 # TODO: Window, Menu, Frame 별도의 class로 분리하기
@@ -66,7 +68,7 @@ class MainWindow(QMainWindow):
         SubWindow(self, 'worker', '시간당 근무 인원수 설정하기\n(0 ~ 3 사이의 수를 입력하세요)', self._db, (self._db.term_count, 0, 3, 1)).show()
 
     def assistant_mode_frame(self):
-        pass
+        SubWindow(self, 'assistant', '사수/부사수 모드', self._db, None).show()
 
     def workshift_term_frame(self):
         SubWindow(self, 'workshift', '근무교대 텀 설정하기\n(0 ~ 24 사이의 수를 입력하세요)', self._db, (self._db.worker_per_term, 0, 24, 1)).show()
@@ -87,8 +89,12 @@ class SubWindow(QMainWindow):
         self.rectangle.moveCenter(self.center)
         self.move(self.rectangle.topLeft())
 
-        # values = (default, min, max, step)
-        self.setCentralWidget(SpinboxWidget(self, mode, message, db, values))
+        if mode in ['worker', 'workershift']:
+            # values = (default, min, max, step)
+            self.setCentralWidget(SpinboxWidget(self, mode, message, db, values))
+        else:
+            print(mode)
+            self.setCentralWidget(RadioButtonWidget(self, message, db))
 
 
 class SpinboxWidget(QWidget):
@@ -164,6 +170,67 @@ class SpinboxWidget(QWidget):
 
 
 class RadioButtonWidget(QWidget):
-    def __init__(self):
-        super().__init__()
-        pass
+    def __init__(self, parent=None, message=None, db=None):
+        super(RadioButtonWidget, self).__init__(parent)
+        print(message)
+        self.db = db
+        self.message = message
+
+        self._on_radio_button = None
+        self._off_radio_button = None
+        self._button = None
+
+        self.init_radio_button_frame()
+
+    @property
+    def on_radio_button(self):
+        return self._on_radio_button
+
+    @on_radio_button.setter
+    def on_radio_button(self, message):
+        self._on_radio_button = QRadioButton(f'{message} 설정하기', self)
+        self._on_radio_button.setChecked(True)
+
+    @property
+    def off_radio_button(self):
+        return self._off_radio_button
+
+    @off_radio_button.setter
+    def off_radio_button(self, message):
+        self._off_radio_button = QRadioButton(f'{message} 해제하기', self)
+
+    @property
+    def button(self):
+        return self._button
+
+    @button.setter
+    def button(self, value):
+        self._button = QPushButton(value)
+
+    def save_radio_checked_value_in_db(self):
+        if self._on_radio_button.isChecked() and self._off_radio_button.isChecked() is False:
+            self.db.assistant_mode = True
+        elif self._off_radio_button.isChecked() and self._on_radio_button.isChecked() is False:
+            self.db.assistant_mode = False
+        else:
+            raise ValueError('invalid radio input')
+
+    def init_radio_button_frame(self):
+        self.on_radio_button = self.message
+        self.off_radio_button = self.message
+        self.button = '저장하기'
+
+        self._button.clicked.connect(self.save_radio_checked_value_in_db)
+
+        vbox = QVBoxLayout()
+        vbox.addWidget(self._on_radio_button)
+        vbox.addWidget(self._off_radio_button)
+        vbox.addWidget(self._button)
+        vbox.addStretch()
+
+        self.setLayout(vbox)
+
+        # TODO: window 위치 조정하기
+        self.setGeometry(300, 300, 300, 200)
+        self.show()
+
