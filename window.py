@@ -93,7 +93,6 @@ class SubWindow(QMainWindow):
             # values = (default, min, max, step)
             self.setCentralWidget(SpinboxWidget(self, mode, message, db, values))
         else:
-            print(mode)
             self.setCentralWidget(RadioButtonWidget(self, message, db))
 
 
@@ -141,7 +140,6 @@ class SpinboxWidget(QWidget):
         self._button = QPushButton(value)
 
     def save_new_value_in_db(self):
-        print(f'save: {self._spinbox.value()}')
         # todo: term_count와 worker_per_term에 @property 적용하기
         if self.mode == 'worker':
             self.db.term_count = self._spinbox.value()
@@ -172,7 +170,6 @@ class SpinboxWidget(QWidget):
 class RadioButtonWidget(QWidget):
     def __init__(self, parent=None, message=None, db=None):
         super(RadioButtonWidget, self).__init__(parent)
-        print(message)
         self.db = db
         self.message = message
 
@@ -189,7 +186,6 @@ class RadioButtonWidget(QWidget):
     @on_radio_button.setter
     def on_radio_button(self, message):
         self._on_radio_button = QRadioButton(f'{message} 설정하기', self)
-        self._on_radio_button.setChecked(True)
 
     @property
     def off_radio_button(self):
@@ -218,8 +214,9 @@ class RadioButtonWidget(QWidget):
     def init_radio_button_frame(self):
         self.on_radio_button = self.message
         self.off_radio_button = self.message
-        self.button = '저장하기'
+        self._on_radio_button.setChecked(True) if self.db.assistant_mode else self._off_radio_button.setChecked(True)
 
+        self.button = '저장하기'
         self._button.clicked.connect(self.save_radio_checked_value_in_db)
 
         vbox = QVBoxLayout()
