@@ -141,6 +141,7 @@ class SpinboxWidget(QWidget):
 
     def save_new_value_in_db(self):
         # todo: term_count와 worker_per_term에 @property 적용하기
+        # TODO: db의 값을 수정할때, DROP user TABLE한뒤 다시 CREATE
         if self.mode == 'worker':
             self.db.term_count = self._spinbox.value()
         elif self.mode == 'workshift':
@@ -204,6 +205,7 @@ class RadioButtonWidget(QWidget):
         self._button = QPushButton(value)
 
     def save_radio_checked_value_in_db(self):
+        # TODO: db의 값을 수정할때, DROP user TABLE한뒤 다시 CREATE
         if self._on_radio_button.isChecked() and self._off_radio_button.isChecked() is False:
             self.db.assistant_mode = True
         elif self._off_radio_button.isChecked() and self._on_radio_button.isChecked() is False:
