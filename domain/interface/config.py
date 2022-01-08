@@ -1,0 +1,41 @@
+from typing import Tuple
+from abc import ABCMeta, abstractmethod
+
+from PyQt5.QtSql import QSqlQuery
+
+
+class ConfigRepository(metaclass=ABCMeta):
+    def __init__(self):
+        self.query = QSqlQuery()
+
+    @property
+    def query(self):
+        return self._query
+
+    @query.setter
+    def query(self, value):
+        self._query = value
+
+    @abstractmethod
+    def create_config_table(self):
+        pass
+
+    @abstractmethod
+    def insert_config(self):
+        pass
+
+    @abstractmethod
+    def get_config(self) -> Tuple[int, int, bool]:
+        pass
+
+    @abstractmethod
+    def set_config_term_count(self, term_count: int):
+        pass
+
+    @abstractmethod
+    def set_config_worker_per_term(self, worker_per_term: int):
+        pass
+
+    @abstractmethod
+    def set_config_assistant_mode(self, assistant_mode: bool):
+        pass
