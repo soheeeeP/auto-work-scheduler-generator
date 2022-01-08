@@ -5,6 +5,11 @@ from domain.interface.config import ConfigRepository
 
 class ConfigInMemoryRepository(ConfigRepository):
     def create_config_table(self):
+        """
+            term_count: 교대제 설정값 (default=3)
+            worker_per_term: 시간당 근무 인원수 (default=1)
+            assistant_mode: 사수/부사수 근무모드 (default=False)
+        """
         self.query.exec_(
             """
             CREATE TABLE if NOT EXISTS config (

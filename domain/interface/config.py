@@ -1,12 +1,10 @@
 from typing import Tuple
 from abc import ABCMeta, abstractmethod
 
-from PyQt5.QtSql import QSqlQuery
-
 
 class ConfigRepository(metaclass=ABCMeta):
     def __init__(self):
-        self.query = QSqlQuery()
+        self._query = None
 
     @property
     def query(self):
