@@ -22,6 +22,10 @@ class UserRepository(metaclass=ABCMeta):
         self._query = value
 
     @abstractmethod
+    def print_user_info_from_query(self):
+        pass
+
+    @abstractmethod
     def create_default_user_table(self):
         pass
 
@@ -30,11 +34,11 @@ class UserRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_all_users(self) -> Union[List[List[Tuple]], None]:
+    def get_all_users(self) -> Union[List[UserType.UserData], None]:
         pass
 
     @abstractmethod
-    def get_user_by_name(self, name: str) -> Tuple:
+    def get_user_by_name(self, name: str) -> Union[UserType.UserData, NameError]:
         pass
 
     @abstractmethod
@@ -42,7 +46,7 @@ class UserRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_users_by_rank(self, rank: str) -> List[UserType.UserData]:
+    def get_users_by_rank(self, rank: str) -> Union[List[UserType.UserData], NameError]:
         pass
 
     @abstractmethod
@@ -50,7 +54,7 @@ class UserRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_users_by_status(self, status: str) -> List[UserType.UserData]:
+    def get_users_by_status(self, status: str) -> Union[List[UserType.UserData], NameError]:
         pass
 
     @abstractmethod
@@ -58,7 +62,7 @@ class UserRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def insert_new_user(self, data: List[UserType.UserData]):
+    def insert_new_user(self, data: UserType.UserData):
         pass
 
     @abstractmethod
