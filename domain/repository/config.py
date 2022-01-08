@@ -32,7 +32,6 @@ class ConfigInMemoryRepository(ConfigRepository):
             self.insert_config()
             self.query.exec_("SELECT * FROM config")
 
-        self.query.next()
         term_count, worker_per_term, assistant_mode = self.query.value(1), self.query.value(2), self.query.value(3)
         return term_count, worker_per_term, bool(assistant_mode)
 
