@@ -74,10 +74,11 @@ class SpinboxWidget(QWidget):
 
 
 class RadioButtonWidget(QWidget):
-    def __init__(self, parent=None, message=None, db=None):
+    def __init__(self, parent=None, message=None, db=None, values=None):
         super(RadioButtonWidget, self).__init__(parent)
         self.db = db
         self.message = message
+        self.values = values
 
         self._on_radio_button = None
         self._off_radio_button = None
@@ -121,7 +122,7 @@ class RadioButtonWidget(QWidget):
     def init_radio_button_frame(self):
         self.on_radio_button = self.message
         self.off_radio_button = self.message
-        self._on_radio_button.setChecked(True) if self.db.assistant_mode else self._off_radio_button.setChecked(True)
+        self._on_radio_button.setChecked(True) if self.values else self._off_radio_button.setChecked(True)
 
         self.button = '저장하기'
         self._button.clicked.connect(self.save_radio_checked_value_in_db)
