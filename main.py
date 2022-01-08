@@ -14,6 +14,7 @@ if __name__ == '__main__':
         config_repository=ConfigInMemoryRepository(),
         user_repository=UserInMemoryRepository()
     )
+    database.create_db_tables()
 
     window = WindowApplication(db=database)
     window.show()

@@ -29,10 +29,12 @@ class ConfigInMemoryRepository(ConfigRepository):
     def get_config(self) -> Tuple[int, int, bool]:
         self.query.exec_("SELECT * FROM config")
         if not self.query.first():
-            return None
+            self.insert_config()
+            self.query.exec_("SELECT * FROM config")
+
         self.query.next()
         term_count, worker_per_term, assistant_mode = self.query.value(1), self.query.value(2), self.query.value(3)
-        return int(term_count), int(worker_per_term), bool(assistant_mode)
+        return term_count, worker_per_term, bool(assistant_mode)
 
     def set_config_term_count(self, term_count: int):
         self.query.exec_(

@@ -64,10 +64,13 @@ class WindowApplication(QMainWindow):
         self.show()
 
     def worker_per_time_frame(self):
-        SubWindow(self, 'worker', '시간당 근무 인원수 설정하기\n(0 ~ 3 사이의 수를 입력하세요)', self._db, (self._db.term_count, 0, 3, 1)).show()
+        term_count, worker_per_term, assistant_mode = self._db.config_repository.get_config()
+        SubWindow(self, 'worker', '시간당 근무 인원수 설정하기\n(0 ~ 3 사이의 수를 입력하세요)', self._db, (term_count, 0, 3, 1)).show()
 
     def assistant_mode_frame(self):
-        SubWindow(self, 'assistant', '사수/부사수 모드', self._db, None).show()
+        term_count, worker_per_term, assistant_mode = self._db.config_repository.get_config()
+        SubWindow(self, 'assistant', '사수/부사수 모드', self._db, assistant_mode).show()
 
     def workshift_term_frame(self):
-        SubWindow(self, 'workshift', '근무교대 텀 설정하기\n(0 ~ 24 사이의 수를 입력하세요)', self._db, (self._db.worker_per_term, 0, 24, 1)).show()
+        term_count, worker_per_term, assistant_mode = self._db.config_repository.get_config()
+        SubWindow(self, 'workshift', '근무교대 텀 설정하기\n(0 ~ 24 사이의 수를 입력하세요)', self._db, (worker_per_term, 0, 24, 1)).show()

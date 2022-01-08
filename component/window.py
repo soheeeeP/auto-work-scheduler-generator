@@ -22,4 +22,5 @@ class SubWindow(QMainWindow):
             # values = (default, min, max, step)
             self.setCentralWidget(SpinboxWidget(self, mode, message, db, values))
         else:
-            self.setCentralWidget(RadioButtonWidget(self, message, db))
+            # values = assistant_mode
+            self.setCentralWidget(RadioButtonWidget(self, message, db, values))

@@ -71,3 +71,10 @@ class DataBase(object):
 
         self.user_repository = user_repository
         self._user_repository.query = self._query
+
+    def create_db_tables(self):
+        self._config_repository.create_config_table()
+        term_count, worker_per_term, assistant_mode = self._config_repository.get_config()
+
+        self._user_repository.create_default_user_table()
+        self._user_repository.add_term_related_columns_in_user(term=term_count)
