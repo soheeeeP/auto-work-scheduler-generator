@@ -45,12 +45,11 @@ class SpinboxWidget(QWidget):
         self._button = QPushButton(value)
 
     def save_new_value_in_db(self):
-        # todo: term_count와 worker_per_term에 @property 적용하기
-        # TODO: db의 값을 수정할때, DROP user TABLE한뒤 다시 CREATE
         if self.mode == 'worker':
-            self.db.term_count = self._spinbox.value()
+            self.db.config_repository.set_config_worker_per_term(self._spinbox.value())
         elif self.mode == 'workshift':
-            self.db.worker_per_term = self._spinbox.value()
+            self.db.config_repository.set_config_term_count(self._spinbox.value())
+        self.close_widget()
 
     def init_widget(self):
         self.spinbox = self.values
@@ -67,10 +66,12 @@ class SpinboxWidget(QWidget):
 
         self.setLayout(vbox)
 
-        # self.setWindowTitle(self.message)
         # TODO: window 위치 조정하기
         self.setGeometry(300, 300, 300, 200)
         self.show()
+
+    def close_widget(self):
+        self.window().close()
 
 
 class RadioButtonWidget(QWidget):
@@ -113,11 +114,12 @@ class RadioButtonWidget(QWidget):
     def save_radio_checked_value_in_db(self):
         # TODO: db의 값을 수정할때, DROP user TABLE한뒤 다시 CREATE
         if self._on_radio_button.isChecked() and self._off_radio_button.isChecked() is False:
-            self.db.assistant_mode = True
+            self.db.config_repository.set_config_assistant_mode(True)
         elif self._off_radio_button.isChecked() and self._on_radio_button.isChecked() is False:
-            self.db.assistant_mode = False
+            self.db.config_repository.set_config_assistant_mode(False)
         else:
             raise ValueError('invalid radio input')
+        self.close_widget()
 
     def init_radio_button_frame(self):
         self.on_radio_button = self.message
@@ -138,3 +140,6 @@ class RadioButtonWidget(QWidget):
         # TODO: window 위치 조정하기
         self.setGeometry(300, 300, 300, 200)
         self.show()
+
+    def close_widget(self):
+        self.window().close()
