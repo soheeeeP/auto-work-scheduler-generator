@@ -94,7 +94,7 @@ class UserInMemoryRepository(UserRepository):
     def delete_user(self, user_id: int):
         self._query.exec_(
             f"""
-            DELETE FROM user WHERE id=f'{user_id}' AND EXISTS (SELECT * FROM user WHERE id=f'{user_id}');
+            DELETE FROM user WHERE id='{user_id}' AND EXISTS (SELECT * FROM user WHERE id='{user_id}');
             """
         )
 
