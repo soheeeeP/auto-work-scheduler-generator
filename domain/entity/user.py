@@ -7,3 +7,4 @@ class User:
     name: str
     rank: str
     status: str = field(default='Default')
+    work_count: int = field(default=0)
