@@ -7,6 +7,7 @@ from component.app import WindowApplication
 from domain.repository.config import ConfigInMemoryRepository
 from domain.repository.user import UserInMemoryRepository
 from domain.repository.workmode import WorkModeInMemoryRepository
+from domain.repository.schedule import ScheduleInMemoryRepository
 
 
 if __name__ == '__main__':
@@ -15,7 +16,8 @@ if __name__ == '__main__':
     database.connect_in_memory_repositories(
         config_repository=ConfigInMemoryRepository(),
         user_repository=UserInMemoryRepository(),
-        work_mode_repository=WorkModeInMemoryRepository()
+        work_mode_repository=WorkModeInMemoryRepository(),
+        schedule_repository=ScheduleInMemoryRepository()
     )
     database.create_db_tables()
 
