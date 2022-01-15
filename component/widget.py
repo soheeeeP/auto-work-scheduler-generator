@@ -45,10 +45,14 @@ class SpinboxWidget(QWidget):
         self._button = QPushButton(value)
 
     def save_new_value_in_db(self):
+        spinbox_value = self._spinbox.value()
         if self.mode == 'worker':
-            self.db.config_repository.set_config_worker_per_term(self._spinbox.value())
+            self.db.config_repository.set_config_worker_per_term(spinbox_value)
         elif self.mode == 'workshift':
-            self.db.config_repository.set_config_term_count(self._spinbox.value())
+            self.db.config_repository.set_config_term_count(spinbox_value)
+
+            self.db.work_mode_repository.drop_work_mode_table()
+            self.db.work_mode_repository.create_work_mode_table(term_count=spinbox_value)
         self.close_widget()
 
     def init_widget(self):
@@ -112,7 +116,6 @@ class RadioButtonWidget(QWidget):
         self._button = QPushButton(value)
 
     def save_radio_checked_value_in_db(self):
-        # TODO: db의 값을 수정할때, DROP user TABLE한뒤 다시 CREATE
         if self._on_radio_button.isChecked() and self._off_radio_button.isChecked() is False:
             self.db.config_repository.set_config_assistant_mode(True)
         elif self._off_radio_button.isChecked() and self._on_radio_button.isChecked() is False:

@@ -94,5 +94,5 @@ class DataBase(object):
         self.config_repository.create_config_table()
         term_count, worker_per_term, assistant_mode = self.config_repository.get_config()
 
-        self._user_repository.create_default_user_table()
-        self._user_repository.add_term_related_columns_in_user(term=term_count)
+        self.user_repository.create_default_user_table()
+        self.work_mode_repository.create_work_mode_table(term_count=term_count)

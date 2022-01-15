@@ -30,10 +30,6 @@ class UserRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def add_term_related_columns_in_user(self, term: int):
-        pass
-
-    @abstractmethod
     def get_all_users(self) -> Union[List[UserType.UserData], None]:
         pass
 
