@@ -1,12 +1,7 @@
-from typing import List, Tuple, TypeVar, NewType, Union
+from typing import List, Tuple, NewType, Union
 from abc import ABCMeta, abstractmethod
 
-
-class UserType(object):
-    # UserInfo = NewType('UserInfo', Tuple[str])
-    # UserWeekDayTerm = NewType('UserDayTerm', Tuple[bool])
-    # UserHolidayTerm = NewType('UserHolidayTerm', Tuple[bool])
-    UserData = NewType('UserData', List[Tuple])
+UserData = NewType('UserData', Tuple)
 
 
 class UserRepository(metaclass=ABCMeta):
@@ -30,43 +25,39 @@ class UserRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def add_term_related_columns_in_user(self, term: int):
+    def get_all_users(self) -> Union[List[UserData], None]:
         pass
 
     @abstractmethod
-    def get_all_users(self) -> Union[List[UserType.UserData], None]:
+    def get_user_by_name(self, name: str) -> Union[UserData, NameError]:
         pass
 
     @abstractmethod
-    def get_user_by_name(self, name: str) -> Union[UserType.UserData, NameError]:
+    def set_user_name(self, user_id: int, name: str):
         pass
 
     @abstractmethod
-    def set_user_name(self, name: str):
+    def get_users_by_rank(self, rank: str) -> Union[List[UserData], NameError]:
         pass
 
     @abstractmethod
-    def get_users_by_rank(self, rank: str) -> Union[List[UserType.UserData], NameError]:
+    def set_user_rank(self, user_id: int, rank: str):
         pass
 
     @abstractmethod
-    def set_user_rank(self, rank: str):
+    def get_users_by_status(self, status: str) -> Union[List[UserData], NameError]:
         pass
 
     @abstractmethod
-    def get_users_by_status(self, status: str) -> Union[List[UserType.UserData], NameError]:
+    def set_user_status(self, user_id: int, status: str):
         pass
 
     @abstractmethod
-    def set_user_status(self, status: str):
+    def insert_new_user(self, user: UserData) -> int:
         pass
 
     @abstractmethod
-    def insert_new_user(self, data: UserType.UserData):
-        pass
-
-    @abstractmethod
-    def insert_dummy_users(self, data: List[UserType.UserData]):
+    def insert_dummy_users(self, user: List[UserData]):
         pass
 
     @abstractmethod
