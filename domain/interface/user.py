@@ -67,3 +67,8 @@ class UserRepository(metaclass=ABCMeta):
     @abstractmethod
     def delete_all_users(self):
         pass
+
+    @abstractmethod
+    def update_user_work_count(self, user_id: int, mode: str):
+        pass
+

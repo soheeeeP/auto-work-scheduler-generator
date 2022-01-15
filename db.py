@@ -3,6 +3,7 @@ from PyQt5.QtSql import QSqlDatabase, QSqlQuery, QSqlQueryModel
 from domain.interface.config import ConfigRepository
 from domain.interface.user import UserRepository
 from domain.interface.workmode import WorkModeRepository
+from domain.interface.schedule import ScheduleRepository
 
 
 class DataBase(object):
@@ -79,7 +80,8 @@ class DataBase(object):
             self,
             config_repository: ConfigRepository,
             user_repository: UserRepository,
-            work_mode_repository: WorkModeRepository
+            work_mode_repository: WorkModeRepository,
+            schedule_repository: ScheduleRepository
     ):
         self.config_repository = config_repository
         self.config_repository.query = self.query
@@ -90,9 +92,13 @@ class DataBase(object):
         self.work_mode_repository = work_mode_repository
         self.work_mode_repository.query = self.query
 
+        self.schedule_repository = schedule_repository
+        self.schedule_repository.query = self.query
+
     def create_db_tables(self):
         self.config_repository.create_config_table()
         term_count, worker_per_term, assistant_mode = self.config_repository.get_config()
 
         self.user_repository.create_default_user_table()
         self.work_mode_repository.create_work_mode_table(term_count=term_count)
+        self.schedule_repository.create_schedule_table()

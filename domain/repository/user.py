@@ -4,15 +4,15 @@ from domain.interface.user import UserRepository, UserData
 
 
 class UserInMemoryRepository(UserRepository):
-    # TODO: user object 생성, workmode object 생성
     def print_user_info_from_query(self):
-        user_id, rank, name, status = \
+        user_id, rank, name, status, work_count = \
             self.query.value(0), \
             self.query.value(1), \
             self.query.value(2), \
-            self.query.value(3)
+            self.query.value(3), \
+            self.query.value(4)
 
-        return UserData((user_id, rank, name, status))
+        return UserData((user_id, rank, name, status, work_count))
 
     def create_default_user_table(self):
         self.query.exec_(
@@ -21,7 +21,8 @@ class UserInMemoryRepository(UserRepository):
                 id INTEGER primary key autoincrement,
                 rank VARCHAR (30) NOT NULL,
                 name VARCHAR (30) NOT NULL,
-                status VARCHAR (30) NOT NULL DEFAULT 'Default'
+                status VARCHAR (30) NOT NULL DEFAULT 'Default',
+                work_count INTEGER DEFAULT 0 CHECK ( work_count >= 0 )
             )
             """
         )
@@ -102,3 +103,11 @@ class UserInMemoryRepository(UserRepository):
 
     def delete_all_users(self):
         self.query.exec_("""DELETE FROM USER;""")
+
+    def update_user_work_count(self, user_id: int, mode: str):
+        if mode == 'up':
+            self.query.exec_(f"""UPDATE user SET work_count = work_count + 1 WHERE id='{user_id}';""")
+        elif mode == 'down':
+            self.query.exec_(f"""UPDATE user SET work_count = work_count - 1 WHERE id='{user_id}';""")
+        else:
+            raise ValueError(f'cannot update user_work_count: invalid mode {mode}')
