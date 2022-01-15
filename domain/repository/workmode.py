@@ -1,6 +1,6 @@
 from typing import List
 
-from domain.interface.workmode import WorkModeRepository, WorkType
+from domain.interface.workmode import WorkModeRepository, WorkData
 
 
 class WorkModeInMemoryRepository(WorkModeRepository):
@@ -21,7 +21,14 @@ class WorkModeInMemoryRepository(WorkModeRepository):
     def drop_work_mode_table(self):
         self.query.exec_("""DROP TABLE workmode;""")
 
-    def update_user_work_mode(self, option: WorkType.WorkData):
+    def insert_user_work_mode(self, user_id: int, option: WorkData):
+        keys = ('user_id', ) + tuple(key for key in option.keys())
+        values = (user_id, ) + tuple(value for value in option.values())
+
+        self.query.prepare(f"""INSERT INTO workmode {keys} VALUES {values};""")
+        self.query.exec_()
+
+    def update_user_work_mode(self, option: WorkData):
         user_id = option['user_id']
         self.query.exec_(f"""SELECT * FROM workmode WHERE user_id='{user_id}';""")
         if not self.query.first():
@@ -30,9 +37,6 @@ class WorkModeInMemoryRepository(WorkModeRepository):
         for key, value in option['data'].items():
             self.query.exec_(f"""UPDATE workmode SET {key} = '{value}' WHERE user_id = '{user_id}';""")
 
-    def update_users_list_work_mode(self, options: List[WorkType.WorkData]):
+    def update_users_list_work_mode(self, options: List[WorkData]):
         for o in options:
-            user_id, data = o['user_id'], o['data']
-            for key, value in data.items():
-                self.query.exec_(f"""UPDATE workmode SET {key} = '{value}' WHERE user_id = '{user_id}';""")
-
+            self.update_user_work_mode(option=o)

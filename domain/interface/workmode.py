@@ -1,9 +1,7 @@
 from typing import List, NewType, Tuple, Dict
 from abc import ABCMeta, abstractmethod
 
-
-class WorkType:
-    WorkData = NewType('WorkData', Dict)
+WorkData = NewType('WorkData', Dict)
 
 
 class WorkModeRepository(metaclass=ABCMeta):
@@ -27,9 +25,13 @@ class WorkModeRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def update_user_work_mode(self, option: WorkType.WorkData):
+    def insert_user_work_mode(self, user_id: int, option: WorkData):
         pass
 
     @abstractmethod
-    def update_users_list_work_mode(self, options: List[WorkType.WorkData]):
+    def update_user_work_mode(self, option: WorkData):
+        pass
+
+    @abstractmethod
+    def update_users_list_work_mode(self, options: List[WorkData]):
         pass
