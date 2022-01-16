@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction
 
-from component.window import SubWindow
+from component.window import SubWindow, DBWindow
+from component.widget import FileWidget, QFileDialog
 
 
 class WindowApplication(QMainWindow):
@@ -38,11 +39,15 @@ class WindowApplication(QMainWindow):
         workShiftTermMenu.triggered.connect(self.workshift_term_frame)
 
         db_menu = menu_bar.addMenu("DB 생성/조회")
+
         createDBMenu = QAction("인원DB 등록", self)
-        editDBMenu = QAction("인원DB 수정", self)
-        viewDBMenu = QAction("인원DB 조회", self)
         db_menu.addAction(createDBMenu)
+        createDBMenu.triggered.connect(self.create_db)
+
+        editDBMenu = QAction("인원DB 수정", self)
         db_menu.addAction(editDBMenu)
+
+        viewDBMenu = QAction("인원DB 조회", self)
         db_menu.addAction(viewDBMenu)
 
         option_menu = menu_bar.addMenu("추가사항")
@@ -74,3 +79,14 @@ class WindowApplication(QMainWindow):
     def workshift_term_frame(self):
         term_count, worker_per_term, assistant_mode = self._db.config_repository.get_config()
         SubWindow(self, 'workshift', '근무교대 텀 설정하기\n(0 ~ 24 사이의 수를 입력하세요)', self._db, (term_count, 0, 24, 1)).show()
+
+    def create_db(self):
+        DBWindow(self, 'create', self._db).show()
+        """
+        1. csv 파일 import
+        2. widget에 읽어들인 데이터 채우기
+        3. 입력된 정보가 맞는지 확인 & 추가 수정
+        4. insert user (rank, name, status)
+        5. insert wokemode (weekday, holiday)
+        """
+        pass
