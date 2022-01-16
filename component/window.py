@@ -1,7 +1,3 @@
-import csv
-import pandas as pd
-import pathlib
-
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QWidget, QVBoxLayout, QFileDialog
 
 from component.widget import SpinboxWidget, RadioButtonWidget, FileWidget
@@ -35,8 +31,8 @@ class DBWindow(QMainWindow):
         super(DBWindow, self).__init__(parent)
         self.mode = mode
         self.db = db
-        self.width = 540
-        self.height = 720
+        self.width = 480
+        self.height = 640
         self.center = QDesktopWidget().availableGeometry().center()
         self.rectangle = self.frameGeometry()
 
@@ -44,5 +40,12 @@ class DBWindow(QMainWindow):
         self.rectangle.moveCenter(self.center)
         self.move(self.rectangle.topLeft())
 
+        # TODO: file_widget 위치 조정
+        file_widget = FileWidget(db=db)
         if self.mode == 'create':
-            self.setCentralWidget(FileWidget(self, db))
+            file_widget.init_widget()
+            file_widget.get_csv_file()
+            self.setCentralWidget(file_widget)
+        else:
+            # TODO: db의 데이터 읽어와서 TableWidget에 set ('조회'인 경우 edit 동작을 수행하지 못하도록 설정)
+            pass

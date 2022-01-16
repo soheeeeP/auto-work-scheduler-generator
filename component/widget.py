@@ -156,16 +156,15 @@ class FileWidget(QWidget):
     def __init__(self, parent=None, db=None):
         super(FileWidget, self).__init__(parent)
         self.db = db
-        self._vbox = None
+        self.vbox = QVBoxLayout()
 
         self._file_open = None
         self._file_save = None
         self._table = None
 
-        self._table_data_dict = None
-
-        self.init_widget()
-        self.get_file()
+        self._row = None
+        self._col = None
+        self._data = None
 
     @property
     def vbox(self):
@@ -203,23 +202,38 @@ class FileWidget(QWidget):
         self._table.setColumnCount(col)
         self._table.setHorizontalHeaderLabels(list(data[0].keys()))
 
-        self.table_data_dict = data
         for i, _row in enumerate(data):
-            for j, (key, value) in enumerate(_row.items()):
-                self._table.setItem(i, j, QTableWidgetItem(value))
+            for j, (key, val) in enumerate(_row.items()):
+                self._table.setItem(i, j, QTableWidgetItem(val))
 
         self._table.resizeRowsToContents()
         self._table.resizeColumnsToContents()
 
     @property
-    def table_data_dict(self):
-        return self._table_data_dict
+    def row(self):
+        return self._row
 
-    @table_data_dict.setter
-    def table_data_dict(self,value):
-        self._table_data_dict = value
+    @row.setter
+    def row(self, value):
+        self._row = value
 
-    def get_file(self):
+    @property
+    def col(self):
+        return self._col
+
+    @col.setter
+    def col(self, value):
+        self._col = value
+
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, value):
+        self._data = value
+
+    def get_csv_file(self):
         dialog = QFileDialog()
         file_filter = ['.csv', '.xls', '.xml', '.xlsx', '.xlsm']
 
@@ -256,27 +270,33 @@ class FileWidget(QWidget):
             row, col = reader.shape
 
         prev_table = self.table
-        self.table = (row, col, data)
-        self.vbox.replaceWidget(prev_table, self.table)
-
-        self.vbox.addWidget(self.table)
-        self.vbox.addWidget(self.file_open)
-        self.vbox.addWidget(self.file_save)
-
-        self.setLayout(self.vbox)
-
-        # TODO: table 크기에 맞게 widget/window 사이즈 조정
-        self.window().resize(self.table.width(), self.table.height())
+        self.row, self.col, self.data = row, col, data
+        self.table = (self.row, self.col, self.data)
+        self.reset_widget(prev_table=prev_table)
 
     def save_file(self):
-        # TODO: 수정된 table의 data를 self.table_data_dict에 set한 뒤, DB에 저장
-        print(self.table_data_dict)
+        # TODO: 수정된 table의 data를 DB에 저장
+        fields = list(self.data[0].keys())
+        for i in range(self.row):
+            for j in range(self.col):
+                print(self.table.item(i, j).text(), end=' | ')
+            print()
 
     def init_widget(self):
-        self.vbox = QVBoxLayout()
-
         self.file_open = '파일 선택하기 (.csv *.xls *.xml *.xlsx *.xlsm)'
-        self.file_open.clicked.connect(self.get_file)
+        self.file_open.clicked.connect(self.get_csv_file)
 
         self.file_save = '파일 저장하기'
         self.file_save.clicked.connect(self.save_file)
+
+        self.vbox.addWidget(self.file_open)
+        self.vbox.addWidget(self.file_save)
+        self.setLayout(self.vbox)
+
+    # TODO: table 크기에 맞게 widget/window 사이즈 조정
+    def reset_widget(self, prev_table):
+        if prev_table:
+            self.vbox.replaceWidget(prev_table, self.table)
+        else:
+            self.vbox.addWidget(self.table)
+        self.setLayout(self.vbox)
