@@ -1,4 +1,4 @@
-from typing import List, NewType, Tuple, Dict
+from typing import List, NewType, Tuple, Dict, Union
 from abc import ABCMeta, abstractmethod
 
 WorkData = NewType('WorkData', Dict)
@@ -34,4 +34,12 @@ class WorkModeRepository(metaclass=ABCMeta):
 
     @abstractmethod
     def update_users_list_work_mode(self, options: List[WorkData]):
+        pass
+
+    @abstractmethod
+    def get_all_users_work_mode_columns(self, term_count: int) -> Union[List[Dict], NameError]:
+        pass
+
+    @abstractmethod
+    def get_user_work_mode_column(self, user_id: int, term_count: int) -> Union[Dict, NameError]:
         pass
