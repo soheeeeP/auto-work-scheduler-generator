@@ -153,18 +153,43 @@ class RadioButtonWidget(QWidget):
 
 
 class FileWidget(QWidget):
-    def __init__(self, parent=None, db=None):
+    mode = None
+
+    def __init__(self, parent=None):
         super(FileWidget, self).__init__(parent)
-        self.db = db
+
         self.vbox = QVBoxLayout()
 
-        self._file_open = None
-        self._file_save = None
-        self._table = None
+        self.file_open = '파일 선택하기 (.csv *.xls *.xml *.xlsx *.xlsm)'
+        self.file_open.clicked.connect(self.get_csv_file)
 
-        self._row = None
-        self._col = None
-        self._data = None
+        self.file_save = '파일 저장하기'
+        self.file_save.clicked.connect(self.save_file)
+
+        self.file_edit = '데이터베이스 수정하기'
+        self.file_edit.clicked.connect(self.save_file)
+
+        self._table = None
+        self._row, self._col, self._data = None, None, None
+
+    def __call__(self, _db, mode):
+        self.db = _db
+        self.term_count = self.db.config_repository.get_config()[0]
+
+        if mode == 'register':
+            self.vbox.addWidget(self.file_open)
+            self.vbox.addWidget(self.file_save)
+            self.row, self.col, self.data = self.get_csv_file()
+        else:
+            self.vbox.addWidget(self.file_edit)
+
+            self.data = self.db.work_mode_repository.get_all_users_work_mode_columns(term_count=self.term_count)
+            self.row, self.col = len(self.data), 4 + (2 * self.term_count)
+
+        prev_table = self.table
+        self.table = (self.row, self.col, self.data)
+        self.reset_widget(prev_table=prev_table)
+        self.setLayout(self.vbox)
 
     @property
     def vbox(self):
@@ -191,6 +216,14 @@ class FileWidget(QWidget):
         self._file_save = QPushButton(value)
 
     @property
+    def file_edit(self):
+        return self._file_edit
+
+    @file_edit.setter
+    def file_edit(self, value):
+        self._file_edit = QPushButton(value)
+
+    @property
     def table(self):
         return self._table
 
@@ -200,8 +233,13 @@ class FileWidget(QWidget):
         self._table = QTableWidget()
         self._table.setRowCount(row)
         self._table.setColumnCount(col)
-        self._table.setHorizontalHeaderLabels(list(data[0].keys()))
 
+        headers = list(data[0].keys())
+        for i in range(1, self.term_count):
+            headers.append(f"평일_{i}")
+            headers.append(f"휴일_{i}")
+
+        self._table.setHorizontalHeaderLabels(headers)
         for i, _row in enumerate(data):
             for j, (key, val) in enumerate(_row.items()):
                 self._table.setItem(i, j, QTableWidgetItem(val))
@@ -269,29 +307,16 @@ class FileWidget(QWidget):
                 data.append({keys[i]: v for i, v in enumerate(r)})
             row, col = reader.shape
 
-        prev_table = self.table
-        self.row, self.col, self.data = row, col, data
-        self.table = (self.row, self.col, self.data)
-        self.reset_widget(prev_table=prev_table)
+        return row, col, data
 
     def save_file(self):
         # TODO: 수정된 table의 data를 DB에 저장
+        # 계급 | 이름 | 사수/부사수 | 평일 | 휴일
         fields = list(self.data[0].keys())
         for i in range(self.row):
             for j in range(self.col):
                 print(self.table.item(i, j).text(), end=' | ')
             print()
-
-    def init_widget(self):
-        self.file_open = '파일 선택하기 (.csv *.xls *.xml *.xlsx *.xlsm)'
-        self.file_open.clicked.connect(self.get_csv_file)
-
-        self.file_save = '파일 저장하기'
-        self.file_save.clicked.connect(self.save_file)
-
-        self.vbox.addWidget(self.file_open)
-        self.vbox.addWidget(self.file_save)
-        self.setLayout(self.vbox)
 
     # TODO: table 크기에 맞게 widget/window 사이즈 조정
     def reset_widget(self, prev_table):
@@ -299,4 +324,19 @@ class FileWidget(QWidget):
             self.vbox.replaceWidget(prev_table, self.table)
         else:
             self.vbox.addWidget(self.table)
-        self.setLayout(self.vbox)
+
+    @classmethod
+    def init_db_register_widget(cls, db):
+        widget = cls()
+        widget(db, 'register')
+        return widget
+
+    @classmethod
+    def init_db_edit_widget(cls, db):
+        widget = cls()
+        widget(db, 'edit')
+        return widget
+
+    def init_db_view_widget(self):
+        # TODO: db 조회
+        pass

@@ -40,12 +40,13 @@ class WindowApplication(QMainWindow):
 
         db_menu = menu_bar.addMenu("DB 생성/조회")
 
-        createDBMenu = QAction("인원DB 등록", self)
-        db_menu.addAction(createDBMenu)
-        createDBMenu.triggered.connect(self.create_db)
+        registerDBMenu = QAction("인원DB 등록", self)
+        db_menu.addAction(registerDBMenu)
+        registerDBMenu.triggered.connect(self.register_db)
 
         editDBMenu = QAction("인원DB 수정", self)
         db_menu.addAction(editDBMenu)
+        editDBMenu.triggered.connect(self.edit_db)
 
         viewDBMenu = QAction("인원DB 조회", self)
         db_menu.addAction(viewDBMenu)
@@ -80,8 +81,8 @@ class WindowApplication(QMainWindow):
         term_count, worker_per_term, assistant_mode = self._db.config_repository.get_config()
         SubWindow(self, 'workshift', '근무교대 텀 설정하기\n(0 ~ 24 사이의 수를 입력하세요)', self._db, (term_count, 0, 24, 1)).show()
 
-    def create_db(self):
-        DBWindow(self, 'create', self._db).show()
+    def register_db(self):
+        DBWindow(self, 'register', self._db).show()
         """
         1. csv 파일 import
         2. widget에 읽어들인 데이터 채우기
@@ -90,3 +91,6 @@ class WindowApplication(QMainWindow):
         5. insert wokemode (weekday, holiday)
         """
         pass
+
+    def edit_db(self):
+        DBWindow(self, 'edit', self._db).show()
