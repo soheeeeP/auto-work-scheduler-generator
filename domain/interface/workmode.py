@@ -29,7 +29,7 @@ class WorkModeRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def update_user_work_mode(self, option: WorkData):
+    def update_user_work_mode(self, user_id: int, option: WorkData):
         pass
 
     @abstractmethod
@@ -37,7 +37,7 @@ class WorkModeRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_all_users_work_mode_columns(self, term_count: int) -> Union[List[Dict], NameError]:
+    def get_all_users_work_mode_columns(self, term_count: int) -> Union[List[Dict], None]:
         pass
 
     @abstractmethod
