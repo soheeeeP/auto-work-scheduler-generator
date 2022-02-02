@@ -14,8 +14,8 @@ class ConfigInMemoryRepository(ConfigRepository):
             """
             CREATE TABLE if NOT EXISTS config (
                 id INTEGER primary key autoincrement,
-                term_count INTEGER DEFAULT 3,
-                worker_per_term INTEGER DEFAULT 1,
+                term_count INTEGER DEFAULT 3 CHECK ( term_count in (1, 2, 3, 4, 12) ),
+                worker_per_term INTEGER DEFAULT 1 CHECK ( worker_per_term in (1, 2, 3) ),
                 assistant_mode BIT DEFAULT 0
             )
             """
