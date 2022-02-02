@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Dict
 
 from domain.interface.user import UserRepository, UserData
 
@@ -37,15 +37,20 @@ class UserInMemoryRepository(UserRepository):
             result.append(self.print_user_info_from_query())
         return result
 
+    def get_user_by_id(self, user_id: int) -> bool:
+        self.query.exec_(f"""SELECT * FROM user WHERE id='{user_id}';""")
+        if not self.query.first():
+            raise NameError(f'user whose id is {id} does not exist')
+
+        self.print_user_info_from_query()
+        return True
+
     def get_user_by_name(self, name: str) -> Union[UserData, NameError]:
         self.query.exec_(f"""SELECT * FROM user WHERE name='{name}';""")
         if not self.query.first():
             raise NameError(f'user whose name is {name} does not exist')
 
         return self.print_user_info_from_query()
-
-    def set_user_name(self, user_id: int, name: str):
-        self.query.exec_(f"""UPDATE user SET name='{name}' WHERE id='{user_id}';""")
 
     def get_users_by_rank(self, rank: str) -> Union[List[UserData], NameError]:
         self.query.exec_(f"""SELECT * FROM user WHERE rank='{rank}';""")
@@ -57,9 +62,6 @@ class UserInMemoryRepository(UserRepository):
             result.append(self.print_user_info_from_query())
         return result
 
-    def set_user_rank(self, user_id: int, rank: str):
-        self.query.exec_(f"""UPDATE user SET rank='{rank}' WHERE id='{user_id}';""")
-
     def get_users_by_status(self, status: str) -> Union[List[UserData], NameError]:
         self.query.exec_(f"""SELECT * FROM user WHERE status='{status}';""")
         if not self.query.first():
@@ -69,9 +71,6 @@ class UserInMemoryRepository(UserRepository):
         while self.query.next():
             result.append(self.print_user_info_from_query())
         return result
-
-    def set_user_status(self, user_id: int, status: str):
-        self.query.exec_(f"""UPDATE user SET status='{status}' WHERE id='{user_id}';""")
 
     def insert_new_user(self, data: UserData) -> int:
         self.query.prepare(
@@ -103,6 +102,35 @@ class UserInMemoryRepository(UserRepository):
 
     def delete_all_users(self):
         self.query.exec_("""DELETE FROM USER;""")
+
+    def get_user_id(self, user_data: Dict) -> Union[int, ValueError]:
+        self.query.prepare(
+            f"""
+            SELECT id FROM user 
+            WHERE name=:name AND rank=:rank AND status=:status AND work_count=:work_count;
+            """
+        )
+        self.query.bindValue(":name", user_data['name'])
+        self.query.bindValue(":rank", user_data['rank'])
+        self.query.bindValue(":status", user_data['status'])
+        self.query.bindValue(":work_count", user_data['work_count'])
+        self.query.exec_()
+
+        if not self.query.first():
+            raise ValueError(f'user does not exist')
+
+        return self.query.value(0) or None
+
+    def update_user(self, user_id: int, user_data: Dict):
+        self.query.prepare(
+            f"""
+            UPDATE user SET (rank, name, status) = (:rank, :name, :status) WHERE id='{user_id}';
+            """
+        )
+        self.query.bindValue(":rank", user_data['rank'])
+        self.query.bindValue(":name", user_data['name'])
+        self.query.bindValue(":status", user_data['status'])
+        self.query.exec_()
 
     def update_user_work_count(self, user_id: int, mode: str):
         if mode == 'up':

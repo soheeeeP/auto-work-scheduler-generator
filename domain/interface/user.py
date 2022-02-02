@@ -1,6 +1,7 @@
-from typing import List, Tuple, NewType, Union
+from typing import List, Tuple, NewType, Union, Dict
 from abc import ABCMeta, abstractmethod
 
+# TODO: dict 활용하기
 UserData = NewType('UserData', Tuple)
 
 
@@ -29,11 +30,11 @@ class UserRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_user_by_name(self, name: str) -> Union[UserData, NameError]:
+    def get_user_by_id(self, user_id: int) -> bool:
         pass
 
     @abstractmethod
-    def set_user_name(self, user_id: int, name: str):
+    def get_user_by_name(self, name: str) -> Union[UserData, NameError]:
         pass
 
     @abstractmethod
@@ -41,15 +42,7 @@ class UserRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def set_user_rank(self, user_id: int, rank: str):
-        pass
-
-    @abstractmethod
     def get_users_by_status(self, status: str) -> Union[List[UserData], NameError]:
-        pass
-
-    @abstractmethod
-    def set_user_status(self, user_id: int, status: str):
         pass
 
     @abstractmethod
@@ -72,3 +65,10 @@ class UserRepository(metaclass=ABCMeta):
     def update_user_work_count(self, user_id: int, mode: str):
         pass
 
+    @abstractmethod
+    def get_user_id(self, user_data: Dict) -> Union[int, ValueError]:
+        pass
+
+    @abstractmethod
+    def update_user(self, user_id: int, user_data: Dict):
+        pass

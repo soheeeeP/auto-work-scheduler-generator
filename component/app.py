@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction
 
-from component.window import SubWindow
+from component.window import SubWindow, DBWindow
 
 
 class WindowApplication(QMainWindow):
@@ -38,12 +38,18 @@ class WindowApplication(QMainWindow):
         workShiftTermMenu.triggered.connect(self.workshift_term_frame)
 
         db_menu = menu_bar.addMenu("DB 생성/조회")
-        createDBMenu = QAction("인원DB 등록", self)
-        editDBMenu = QAction("인원DB 수정", self)
-        viewDBMenu = QAction("인원DB 조회", self)
-        db_menu.addAction(createDBMenu)
-        db_menu.addAction(editDBMenu)
-        db_menu.addAction(viewDBMenu)
+
+        registerDBMenu = QAction("인원DB 등록", self)
+        db_menu.addAction(registerDBMenu)
+        registerDBMenu.triggered.connect(self.register_db)
+
+        editviewDBMenu = QAction("인원DB 수정 및 조회", self)
+        db_menu.addAction(editviewDBMenu)
+        editviewDBMenu.triggered.connect(self.edit_db)
+
+        deleteDBMenu = QAction("인원DB 삭제", self)
+        db_menu.addAction(deleteDBMenu)
+        deleteDBMenu.triggered.connect(self.delete_db)
 
         option_menu = menu_bar.addMenu("추가사항")
         outsideTheBarrackMenu = QAction("영외인원 등록 및 수정", self)
@@ -74,3 +80,12 @@ class WindowApplication(QMainWindow):
     def workshift_term_frame(self):
         term_count, worker_per_term, assistant_mode = self._db.config_repository.get_config()
         SubWindow(self, 'workshift', '근무교대 텀 설정하기\n(0 ~ 24 사이의 수를 입력하세요)', self._db, (term_count, 0, 24, 1)).show()
+
+    def register_db(self):
+        DBWindow(self, 'register', self._db).show()
+
+    def edit_db(self):
+        DBWindow(self, 'edit/view', self._db).show()
+
+    def delete_db(self):
+        DBWindow(self, 'delete', self._db).show()
