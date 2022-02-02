@@ -1,6 +1,8 @@
 import csv
 import pandas as pd
 import pathlib
+
+from PyQt5.QtCore import QItemSelectionModel
 from PyQt5.QtWidgets import QWidget, QRadioButton, QPushButton, QVBoxLayout, QSpinBox, QLabel, QFileDialog, \
     QTableWidget, QTableWidgetItem, QDesktopWidget
 
@@ -166,25 +168,43 @@ class FileWidget(QWidget):
         self.file_save = '파일 저장하기'
         self.file_save.clicked.connect(self.save_file)
 
-        self.file_edit = '데이터베이스 수정하기'
-        self.file_edit.clicked.connect(self.save_file)
+        self.edit = '데이터베이스 수정하기'
+        self.edit.clicked.connect(self.edit_db)
+
+        self.delete_item = '삭제'
+        self.delete_item.clicked.connect(self.delete_row)
+        self.delete_all = '데이터베이스 비우기'
+        self.delete_all.clicked.connect(self.clear_db)
 
         self._table = None
         self._row, self._col, self._data = None, None, None
 
     def __call__(self, _db, mode):
         self.db = _db
+        self.mode = mode
         self.term_count = self.db.config_repository.get_config()[0]
+
+        self.label_for_display = {
+            "rank": "계급",
+            "name": "이름",
+            "status": "사수/부사수",
+            "work_count": "근무 카운트"
+        }
+        self.label_for_db = {v: k for k, v in self.label_for_display.items()}
 
         if mode == 'register':
             self.vbox.addWidget(self.file_open)
             self.vbox.addWidget(self.file_save)
             self.row, self.col, self.data = self.get_csv_file()
         else:
-            self.vbox.addWidget(self.file_edit)
-
             self.data = self.db.work_mode_repository.get_all_users_work_mode_columns(term_count=self.term_count)
-            self.row, self.col = len(self.data), 4 + (2 * self.term_count)
+            self.row, self.col = len(self.data), 4 + (2 * self.term_count) + 1
+
+            if mode == 'edit/view':
+                self.vbox.addWidget(self.edit)
+            elif mode == 'delete':
+                self.vbox.addWidget(self.delete_item)
+                self.vbox.addWidget(self.delete_all)
 
         prev_table = self.table
         self.table = (self.row, self.col, self.data)
@@ -216,12 +236,28 @@ class FileWidget(QWidget):
         self._file_save = QPushButton(value)
 
     @property
-    def file_edit(self):
-        return self._file_edit
+    def edit(self):
+        return self._edit
 
-    @file_edit.setter
-    def file_edit(self, value):
-        self._file_edit = QPushButton(value)
+    @edit.setter
+    def edit(self, value):
+        self._edit = QPushButton(value)
+
+    @property
+    def delete_all(self):
+        return self._delete_all
+
+    @delete_all.setter
+    def delete_all(self, value):
+        self._delete_all = QPushButton(value)
+
+    @property
+    def delete_item(self):
+        return self._delete_item
+
+    @delete_item.setter
+    def delete_item(self, value):
+        self._delete_item = QPushButton(value)
 
     @property
     def table(self):
@@ -233,16 +269,23 @@ class FileWidget(QWidget):
         self._table = QTableWidget()
         self._table.setRowCount(row)
         self._table.setColumnCount(col)
+        print(col)
 
-        headers = list(data[0].keys())
-        for i in range(1, self.term_count):
+        headers = list(self.label_for_db.keys())
+        for i in range(1, self.term_count + 1):
             headers.append(f"평일_{i}")
             headers.append(f"휴일_{i}")
+        print(headers)
 
+        if self.mode != 'register':
+            headers.insert(0, 'id')
         self._table.setHorizontalHeaderLabels(headers)
         for i, _row in enumerate(data):
             for j, (key, val) in enumerate(_row.items()):
-                self._table.setItem(i, j, QTableWidgetItem(val))
+                self._table.setItem(i, j, QTableWidgetItem(str(val)))
+
+        if self.mode != 'register':
+            self._table.hideColumn(0)
 
         self._table.resizeRowsToContents()
         self._table.resizeColumnsToContents()
@@ -309,14 +352,80 @@ class FileWidget(QWidget):
 
         return row, col, data
 
-    def save_file(self):
-        # TODO: 수정된 table의 data를 DB에 저장
-        # 계급 | 이름 | 사수/부사수 | 평일 | 휴일
-        fields = list(self.data[0].keys())
+    def get_table_cur_data(self):
+        """
+        csv 파일에서 읽어온, 아직 db에 저장되지 않은 데이터로,
+        user_data에 id값이 포함되어 있지 않음
+        """
+        user_list = []
         for i in range(self.row):
+            user_data, work_mode_option = {}, {}
             for j in range(self.col):
-                print(self.table.item(i, j).text(), end=' | ')
-            print()
+                val = self.table.horizontalHeaderItem(j).text()
+                if val in self.label_for_display.values():
+                    user_data[self.label_for_db[val]] = self.table.item(i, j).text()
+                else:
+                    work_mode_option[val] = self.table.item(i, j).text()
+            user_list.append({
+                "data": user_data,
+                "work_mode_option": work_mode_option
+            })
+        return user_list
+
+    def get_table_raw_data(self):
+        """
+        db에서 읽어온 table의 raw data로
+        user_data값에 해당 user 객체의 id값이 포함
+        """
+        user_list = []
+        for i, _row in enumerate(self.data):
+            user_data, work_mode_option = {}, {}
+            for j, (key, val) in enumerate(_row.items()):
+                if key in self.label_for_display.keys():
+                    user_data[key] = val
+                else:
+                    work_mode_option[key] = val
+            user_list.append({
+                "data": user_data,
+                "work_mode_option": work_mode_option
+            })
+        return user_list
+
+    def save_file(self):
+        user_list = self.get_table_cur_data()
+        print(user_list)
+        for user in user_list:
+            new_user_id = self.db.user_repository.insert_new_user(data=user["data"])
+            self.db.work_mode_repository.insert_user_work_mode(
+                user_id=new_user_id,
+                option=user["work_mode_option"]
+            )
+
+    def edit_db(self):
+        # FEATURE: 수정 전/후 데이터 구분하기
+        _user_list = self.get_table_raw_data()      # 수정되기 전의 data
+        new_user_list = self.get_table_cur_data()   # 현재 table에 저장되어 있는 data
+        for i, user in enumerate(_user_list):
+            user_id = user["data"]["id"]
+            if self.db.user_repository.get_user_by_id(user_id=user_id):
+                self.db.user_repository.update_user(
+                    user_id=user_id,
+                    user_data=new_user_list[i]["data"]
+                )
+                self.db.work_mode_repository.update_user_work_mode(
+                    user_id=user_id,
+                    option=user["work_mode_option"]
+                )
+
+    def delete_row(self):
+        # FEATURE: 유저 row 삭제 구현하기
+        idx = self.table.selectionModel().selectedIndexes()
+        for i in idx:
+            print(i.row())
+
+    def clear_db(self):
+        # FEATURE: db 전체 삭제
+        pass
 
     # TODO: table 크기에 맞게 widget/window 사이즈 조정
     def reset_widget(self, prev_table):
@@ -334,9 +443,11 @@ class FileWidget(QWidget):
     @classmethod
     def init_db_edit_widget(cls, db):
         widget = cls()
-        widget(db, 'edit')
+        widget(db, 'edit/view')
         return widget
 
-    def init_db_view_widget(self):
-        # TODO: db 조회
-        pass
+    @classmethod
+    def init_db_delete_widget(cls, db):
+        widget = cls()
+        widget(db, 'delete')
+        return widget

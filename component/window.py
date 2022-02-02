@@ -41,9 +41,12 @@ class DBWindow(QMainWindow):
         self.move(self.rectangle.topLeft())
 
         # TODO: file_widget 위치 조정
-        if self.mode == 'register':
+        if mode == 'register':
             file_widget = FileWidget.init_db_register_widget(db=db)
-        else:
-            # TODO: db의 데이터 읽어와서 TableWidget에 set ('조회'인 경우 edit 동작을 수행하지 못하도록 설정)
+        elif mode == 'edit/view':
             file_widget = FileWidget.init_db_edit_widget(db=db)
+        elif mode == 'delete':
+            file_widget = FileWidget.init_db_delete_widget(db=db)
+        else:
+            return
         self.setCentralWidget(file_widget)

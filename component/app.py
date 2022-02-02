@@ -1,7 +1,6 @@
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction
 
 from component.window import SubWindow, DBWindow
-from component.widget import FileWidget, QFileDialog
 
 
 class WindowApplication(QMainWindow):
@@ -44,12 +43,13 @@ class WindowApplication(QMainWindow):
         db_menu.addAction(registerDBMenu)
         registerDBMenu.triggered.connect(self.register_db)
 
-        editDBMenu = QAction("인원DB 수정", self)
-        db_menu.addAction(editDBMenu)
-        editDBMenu.triggered.connect(self.edit_db)
+        editviewDBMenu = QAction("인원DB 수정 및 조회", self)
+        db_menu.addAction(editviewDBMenu)
+        editviewDBMenu.triggered.connect(self.edit_db)
 
-        viewDBMenu = QAction("인원DB 조회", self)
-        db_menu.addAction(viewDBMenu)
+        deleteDBMenu = QAction("인원DB 삭제", self)
+        db_menu.addAction(deleteDBMenu)
+        deleteDBMenu.triggered.connect(self.delete_db)
 
         option_menu = menu_bar.addMenu("추가사항")
         outsideTheBarrackMenu = QAction("영외인원 등록 및 수정", self)
@@ -83,14 +83,9 @@ class WindowApplication(QMainWindow):
 
     def register_db(self):
         DBWindow(self, 'register', self._db).show()
-        """
-        1. csv 파일 import
-        2. widget에 읽어들인 데이터 채우기
-        3. 입력된 정보가 맞는지 확인 & 추가 수정
-        4. insert user (rank, name, status)
-        5. insert wokemode (weekday, holiday)
-        """
-        pass
 
     def edit_db(self):
-        DBWindow(self, 'edit', self._db).show()
+        DBWindow(self, 'edit/view', self._db).show()
+
+    def delete_db(self):
+        DBWindow(self, 'delete', self._db).show()
