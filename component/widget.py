@@ -189,7 +189,7 @@ class FileWidget(QWidget):
             "name": "이름",
             "status": "사수/부사수",
             "weekday_work_count": "평일 카운트",
-            "weekday_work_count": "주말 카운트"
+            "holiday_work_count": "주말 카운트"
         }
         self.label_for_db = {v: k for k, v in self.label_for_display.items()}
 
