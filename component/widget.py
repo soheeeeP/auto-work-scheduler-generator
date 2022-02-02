@@ -2,37 +2,81 @@ import csv
 import pandas as pd
 import pathlib
 
-from PyQt5.QtCore import QItemSelectionModel
-from PyQt5.QtWidgets import QWidget, QRadioButton, QPushButton, QVBoxLayout, QSpinBox, QLabel, QFileDialog, \
-    QTableWidget, QTableWidgetItem, QDesktopWidget
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QWidget, QRadioButton, QPushButton, QVBoxLayout, QHBoxLayout, QSpinBox, QLabel, QFileDialog, \
+    QTableWidget, QTableWidgetItem
 
 
-class SpinboxWidget(QWidget):
-    def __init__(self, parent=None, mode=None, message=None, db=None, values=None):
-        super(SpinboxWidget, self).__init__(parent)
-        self.mode = mode
-        self.db = db
-        self.message = message
-        self.values = values
+class RadioButtonWidget(QWidget):
+    def __init__(self, parent=None):
+        super(RadioButtonWidget, self).__init__(parent)
 
-        self._spinbox = None
         self._label_title = None
-        self._button = None
 
-        self.init_widget()
+        self._on_radio_button = None
+        self._off_radio_button = None
+        self._save_button = None
 
-    @property
-    def spinbox(self):
-        return self._spinbox
+        self.vbox = QVBoxLayout()
+        self.radio_box = QHBoxLayout()
 
-    @spinbox.setter
-    def spinbox(self, values):
-        default_value, min_value, max_value, step = values
+    def __call__(self, _db, val, mode, message):
+        self.db = _db
+        self.val = val
 
-        self._spinbox = QSpinBox()
-        self._spinbox.setRange(min_value, max_value)
-        self._spinbox.setSingleStep(step)
-        self._spinbox.setValue(default_value)
+        self.label_title = message
+        self.label_title.setAlignment(Qt.AlignCenter)
+        self.save_button = '저장하기'
+
+        # TODO: config constraints를 동적으로 가져오도록 수정
+        if mode == 'worker':
+            self.worker = {
+                '1_worker': QRadioButton('1명'),
+                '2_worker': QRadioButton('2명'),
+                '3_worker': QRadioButton('3명')
+            }
+            for k, v in self.worker.items():
+                self.radio_box.addWidget(v)
+                if int(k.split('_')[0]) == val:
+                    v.setChecked(True)
+
+            self._save_button.clicked.connect(self.save_worker_config_value_in_db)
+
+        elif mode == 'work_shift':
+            self.work_shift = {
+                '1_work_shift': QRadioButton('1교대'),
+                '2_work_shift': QRadioButton('2교대'),
+                '3_work_shift': QRadioButton('3교대'),
+                '4_work_shift': QRadioButton('4교대'),
+                '12_work_shift': QRadioButton('12교대')
+            }
+            for k, v in self.work_shift.items():
+                self.radio_box.addWidget(v)
+                if int(k.split('_')[0]) == val:
+                    v.setChecked(True)
+
+            self._save_button.clicked.connect(self.save_work_shift_config_value_in_db)
+
+        else:
+            self.on_radio_button, self.off_radio_button = '설정', '해제'
+            self._on_radio_button.setChecked(True) if self.val else self._off_radio_button.setChecked(True)
+
+            self.radio_box.addWidget(self.on_radio_button)
+            self.radio_box.addWidget(self.off_radio_button)
+
+            self._save_button.clicked.connect(self.save_radio_checked_value_in_db)
+
+        self.vbox.addWidget(self.label_title)
+        self.vbox.addSpacing(20)
+        self.vbox.addLayout(self.radio_box)
+        self.vbox.addWidget(self.save_button)
+
+        self.vbox.setAlignment(Qt.AlignCenter)
+
+        self.setLayout(self.vbox)
+
+        self.setGeometry(300, 300, 200, 200)
+        self.show()
 
     @property
     def label_title(self):
@@ -43,67 +87,12 @@ class SpinboxWidget(QWidget):
         self._label_title = QLabel(message)
 
     @property
-    def button(self):
-        return self._button
-
-    @button.setter
-    def button(self, value):
-        self._button = QPushButton(value)
-
-    def save_new_value_in_db(self):
-        spinbox_value = self._spinbox.value()
-        if self.mode == 'worker':
-            self.db.config_repository.set_config_worker_per_term(spinbox_value)
-        elif self.mode == 'workshift':
-            self.db.config_repository.set_config_term_count(spinbox_value)
-
-            self.db.work_mode_repository.drop_work_mode_table()
-            self.db.work_mode_repository.create_work_mode_table(term_count=spinbox_value)
-        self.close_widget()
-
-    def init_widget(self):
-        self.spinbox = self.values
-        self.label_title = self.message
-        self.button = '저장하기'
-
-        self._button.clicked.connect(self.save_new_value_in_db)
-
-        vbox = QVBoxLayout()
-        vbox.addWidget(self._label_title)
-        vbox.addWidget(self._spinbox)
-        vbox.addWidget(self._button)
-        vbox.addStretch()
-
-        self.setLayout(vbox)
-
-        # TODO: window 위치 조정하기
-        self.setGeometry(300, 300, 300, 200)
-        self.show()
-
-    def close_widget(self):
-        self.window().close()
-
-
-class RadioButtonWidget(QWidget):
-    def __init__(self, parent=None, message=None, db=None, values=None):
-        super(RadioButtonWidget, self).__init__(parent)
-        self.db = db
-        self.message = message
-        self.values = values
-
-        self._on_radio_button = None
-        self._off_radio_button = None
-        self._button = None
-
-        self.init_radio_button_frame()
-
-    @property
     def on_radio_button(self):
         return self._on_radio_button
 
     @on_radio_button.setter
     def on_radio_button(self, message):
-        self._on_radio_button = QRadioButton(f'{message} 설정하기', self)
+        self._on_radio_button = QRadioButton(message, self)
 
     @property
     def off_radio_button(self):
@@ -111,15 +100,27 @@ class RadioButtonWidget(QWidget):
 
     @off_radio_button.setter
     def off_radio_button(self, message):
-        self._off_radio_button = QRadioButton(f'{message} 해제하기', self)
+        self._off_radio_button = QRadioButton(message, self)
 
     @property
-    def button(self):
-        return self._button
+    def save_button(self):
+        return self._save_button
 
-    @button.setter
-    def button(self, value):
-        self._button = QPushButton(value)
+    @save_button.setter
+    def save_button(self, value):
+        self._save_button = QPushButton(value)
+
+    def save_worker_config_value_in_db(self):
+        value = [k for k, v in self.worker.items() if v.isChecked()][0]
+        if value:
+            self.db.config_repository.set_config_worker_per_term(worker_per_term=int(value.split('_')[0]))
+        self.close_widget()
+
+    def save_work_shift_config_value_in_db(self):
+        value = [k for k, v in self.work_shift.items() if v.isChecked()][0]
+        if value:
+            self.db.config_repository.set_config_term_count(term_count=int(value.split('_')[0]))
+        self.close_widget()
 
     def save_radio_checked_value_in_db(self):
         if self._on_radio_button.isChecked() and self._off_radio_button.isChecked() is False:
@@ -130,28 +131,26 @@ class RadioButtonWidget(QWidget):
             raise ValueError('invalid radio input')
         self.close_widget()
 
-    def init_radio_button_frame(self):
-        self.on_radio_button = self.message
-        self.off_radio_button = self.message
-        self._on_radio_button.setChecked(True) if self.values else self._off_radio_button.setChecked(True)
-
-        self.button = '저장하기'
-        self._button.clicked.connect(self.save_radio_checked_value_in_db)
-
-        vbox = QVBoxLayout()
-        vbox.addWidget(self._on_radio_button)
-        vbox.addWidget(self._off_radio_button)
-        vbox.addWidget(self._button)
-        vbox.addStretch()
-
-        self.setLayout(vbox)
-
-        # TODO: window 위치 조정하기
-        self.setGeometry(300, 300, 300, 200)
-        self.show()
-
     def close_widget(self):
         self.window().close()
+
+    @classmethod
+    def worker_widget(cls, db, val):
+        widget = cls()
+        widget(db, val, 'worker', '시간당 근무 인원수')
+        return widget
+
+    @classmethod
+    def work_shift_widget(cls, db, val):
+        widget = cls()
+        widget(db, val, 'work_shift', '근무 교대')
+        return widget
+
+    @classmethod
+    def assistant_widget(cls, db, val):
+        widget = cls()
+        widget(db, val, 'assistant', '사수 / 부사수 모드')
+        return widget
 
 
 class FileWidget(QWidget):

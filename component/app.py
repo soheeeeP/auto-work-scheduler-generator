@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction
 
+from component.widget import RadioButtonWidget
 from component.window import SubWindow, DBWindow
 
 
@@ -35,7 +36,7 @@ class WindowApplication(QMainWindow):
 
         workShiftTermMenu = QAction("근무교대 텀 설정", self)
         setting_menu.addAction(workShiftTermMenu)
-        workShiftTermMenu.triggered.connect(self.workshift_term_frame)
+        workShiftTermMenu.triggered.connect(self.work_shift_term_frame)
 
         db_menu = menu_bar.addMenu("DB 생성/조회")
 
@@ -67,19 +68,19 @@ class WindowApplication(QMainWindow):
         save_menu.addAction(saveWorkRoutineCellMenu)
         save_menu.addAction(saveWorkCountCellMenu)
 
+        self.term_count, self.worker_per_term, self.assistant_mode \
+            = self._db.config_repository.get_config()
         self.show()
 
+    # TODO: min_value, max_value 수정하기
     def worker_per_time_frame(self):
-        term_count, worker_per_term, assistant_mode = self._db.config_repository.get_config()
-        SubWindow(self, 'worker', '시간당 근무 인원수 설정하기\n(0 ~ 3 사이의 수를 입력하세요)', self._db, (worker_per_term, 0, 3, 1)).show()
+        SubWindow(self, 'worker', self._db, self.worker_per_term).show()
 
     def assistant_mode_frame(self):
-        term_count, worker_per_term, assistant_mode = self._db.config_repository.get_config()
-        SubWindow(self, 'assistant', '사수/부사수 모드', self._db, assistant_mode).show()
+        SubWindow(self, 'assistant', self._db, self.assistant_mode).show()
 
-    def workshift_term_frame(self):
-        term_count, worker_per_term, assistant_mode = self._db.config_repository.get_config()
-        SubWindow(self, 'workshift', '근무교대 텀 설정하기\n(0 ~ 24 사이의 수를 입력하세요)', self._db, (term_count, 0, 24, 1)).show()
+    def work_shift_term_frame(self):
+        SubWindow(self, 'work_shift', self._db, self.term_count).show()
 
     def register_db(self):
         DBWindow(self, 'register', self._db).show()
