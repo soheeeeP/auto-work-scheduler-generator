@@ -188,7 +188,8 @@ class FileWidget(QWidget):
             "rank": "계급",
             "name": "이름",
             "status": "사수/부사수",
-            "work_count": "근무 카운트"
+            "weekday_work_count": "평일 카운트",
+            "weekday_work_count": "주말 카운트"
         }
         self.label_for_db = {v: k for k, v in self.label_for_display.items()}
 
