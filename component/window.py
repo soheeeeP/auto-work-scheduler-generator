@@ -1,10 +1,10 @@
-from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QWidget, QVBoxLayout, QFileDialog
+from PyQt5.QtWidgets import QMainWindow, QDesktopWidget
 
-from component.widget import SpinboxWidget, RadioButtonWidget, FileWidget
+from component.widget import RadioButtonWidget, FileWidget
 
 
 class SubWindow(QMainWindow):
-    def __init__(self, parent=None, mode=None, message=None, db=None, values=None):
+    def __init__(self, parent=None, mode=None, db=None, default=None):
         super(SubWindow, self).__init__(parent)
         self.mode = mode
         self.db = db
@@ -18,12 +18,15 @@ class SubWindow(QMainWindow):
         self.rectangle.moveCenter(self.center)
         self.move(self.rectangle.topLeft())
 
-        if mode in ['worker', 'workshift']:
-            # values = (default, min, max, step)
-            self.setCentralWidget(SpinboxWidget(self, mode, message, db, values))
+        if mode == 'worker':
+            radio_widget = RadioButtonWidget.worker_widget(db=db, val=default)
+        elif mode == 'work_shift':
+            radio_widget = RadioButtonWidget.work_shift_widget(db=db, val=default)
+        elif mode == 'assistant':
+            radio_widget = RadioButtonWidget.assistant_widget(db=db, val=default)
         else:
-            # values = assistant_mode
-            self.setCentralWidget(RadioButtonWidget(self, message, db, values))
+            return
+        self.setCentralWidget(radio_widget)
 
 
 class DBWindow(QMainWindow):

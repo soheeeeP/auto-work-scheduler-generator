@@ -5,14 +5,15 @@ from domain.interface.user import UserRepository, UserData
 
 class UserInMemoryRepository(UserRepository):
     def print_user_info_from_query(self):
-        user_id, rank, name, status, work_count = \
+        user_id, rank, name, status, weekday_work_count, holiday_week_count = \
             self.query.value(0), \
             self.query.value(1), \
             self.query.value(2), \
             self.query.value(3), \
-            self.query.value(4)
+            self.query.value(4), \
+            self.query.value(5)
 
-        return UserData((user_id, rank, name, status, work_count))
+        return UserData((user_id, rank, name, status, weekday_work_count, holiday_week_count))
 
     def create_default_user_table(self):
         self.query.exec_(
@@ -22,7 +23,8 @@ class UserInMemoryRepository(UserRepository):
                 rank VARCHAR (30) NOT NULL,
                 name VARCHAR (30) NOT NULL,
                 status VARCHAR (30) NOT NULL DEFAULT 'Default',
-                work_count INTEGER DEFAULT 0 CHECK ( work_count >= 0 )
+                weekday_work_count INTEGER DEFAULT 0 CHECK ( weekday_work_count >= 0 ),
+                holiday_work_count INTEGER DEFAULT 0 CHECK ( holiday_work_count >= 0 )
             )
             """
         )
@@ -107,13 +109,16 @@ class UserInMemoryRepository(UserRepository):
         self.query.prepare(
             f"""
             SELECT id FROM user 
-            WHERE name=:name AND rank=:rank AND status=:status AND work_count=:work_count;
+            WHERE name=:name AND rank=:rank AND status=:status 
+            AND weekday_work_count=:weekday_work_count
+            AND holiday_work_count=:holiday_work_count;
             """
         )
         self.query.bindValue(":name", user_data['name'])
         self.query.bindValue(":rank", user_data['rank'])
         self.query.bindValue(":status", user_data['status'])
-        self.query.bindValue(":work_count", user_data['work_count'])
+        self.query.bindValue(":weekday_work_count", user_data['weekday_work_count'])
+        self.query.bindValue(":holiday_work_count", user_data['holiday_work_count'])
         self.query.exec_()
 
         if not self.query.first():
@@ -132,10 +137,9 @@ class UserInMemoryRepository(UserRepository):
         self.query.bindValue(":status", user_data['status'])
         self.query.exec_()
 
-    def update_user_work_count(self, user_id: int, mode: str):
-        if mode == 'up':
-            self.query.exec_(f"""UPDATE user SET work_count = work_count + 1 WHERE id='{user_id}';""")
-        elif mode == 'down':
-            self.query.exec_(f"""UPDATE user SET work_count = work_count - 1 WHERE id='{user_id}';""")
+    def update_user_work_count(self, user_id: int, mode: str, up: bool):
+        col = f'{mode}_work_count'
+        if up:
+            self.query.exec_(f"""UPDATE user SET {col} = '{col}' + 1 WHERE id='{user_id}';""")
         else:
-            raise ValueError(f'cannot update user_work_count: invalid mode {mode}')
+            self.query.exec_(f"""UPDATE user SET {col} = '{col}' - 1 WHERE id='{user_id}';""")

@@ -62,7 +62,12 @@ class UserRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def update_user_work_count(self, user_id: int, mode: str):
+    def update_user_work_count(self, user_id: int, mode: str, up: bool):
+        """
+        :param user_id: 객체의 pk
+        :param mode: count를 저장할 요일 ("weekday", "holiday")
+        :param up: work_count 증가/감소 (True, False)
+        """
         pass
 
     @abstractmethod
