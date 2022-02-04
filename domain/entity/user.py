@@ -7,4 +7,6 @@ class User:
     name: str
     rank: str
     status: str = field(default='Default')
-    work_count: int = field(default=0)
+    weekday_work_count: int = field(default=0)
+    holiday_work_count: int = field(default=0)
+    work_mode: str = field(default='on')
