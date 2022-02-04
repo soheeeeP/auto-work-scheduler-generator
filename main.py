@@ -10,16 +10,18 @@ from domain.repository.workmode import WorkModeInMemoryRepository
 from domain.repository.schedule import ScheduleInMemoryRepository
 
 
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    database = DataBase(db_name='test.db')
-    database.connect_in_memory_repositories(
+database = DataBase(db_name='test.db')
+database.connect_in_memory_repositories(
         config_repository=ConfigInMemoryRepository(),
         user_repository=UserInMemoryRepository(),
         work_mode_repository=WorkModeInMemoryRepository(),
         schedule_repository=ScheduleInMemoryRepository()
     )
-    database.create_db_tables()
+database.create_db_tables()
+
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
 
     window = WindowApplication(db=database)
     window.show()
