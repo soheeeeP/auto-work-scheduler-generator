@@ -25,7 +25,7 @@ class UserInMemoryRepository(UserRepository):
                 status VARCHAR (30) NOT NULL DEFAULT 'Default',
                 weekday_work_count INTEGER DEFAULT 0 CHECK ( weekday_work_count >= 0 ),
                 holiday_work_count INTEGER DEFAULT 0 CHECK ( holiday_work_count >= 0 ),
-                work_mode VARCHAR (30) DEFAULT 'on' CHECK ( work_mode IN ('on', 'off(out)', 'off(exception)'))
+                work_mode VARCHAR (30) DEFAULT 'on' CHECK ( work_mode IN ('on', 'off'))
             )
             """
         )
@@ -133,12 +133,19 @@ class UserInMemoryRepository(UserRepository):
     def update_user(self, user_id: int, user_data: Dict):
         self.query.prepare(
             f"""
-            UPDATE user SET (rank, name, status) = (:rank, :name, :status) WHERE id='{user_id}';
+            UPDATE user
+            SET (rank, name, status, weekday_work_count, holiday_work_count, work_mode)
+            = (:rank, :name, :status, :weekday_work_count, :holiday_work_count, :work_mode)
+            WHERE id='{user_id}';
             """
         )
         self.query.bindValue(":rank", user_data['rank'])
         self.query.bindValue(":name", user_data['name'])
         self.query.bindValue(":status", user_data['status'])
+        self.query.bindValue(":weekday_work_count", int(user_data['weekday_work_count']))
+        self.query.bindValue(":holiday_work_count", int(user_data['holiday_work_count']))
+        self.query.bindValue(":work_mode", user_data['work_mode'])
+
         self.query.exec_()
 
     def update_user_work_count(self, user_id: int, mode: str, up: bool):
