@@ -79,6 +79,7 @@ class LogInDialog(QDialog):
         else:
             event.accept()
 
+
 class RegisterDialog(QDialog):
     def __init__(self):
         super().__init__()
@@ -94,7 +95,7 @@ class RegisterDialog(QDialog):
         self.register = "계정 생성하기"
         self.register.clicked.connect(self.register_clicked)
 
-        self.setup_layout()
+        self.setupLayout()
 
     @property
     def register(self):
@@ -104,7 +105,7 @@ class RegisterDialog(QDialog):
     def register(self, value):
         self._register = QPushButton(value)
 
-    def setup_layout(self):
+    def setupLayout(self):
         center = QDesktopWidget().availableGeometry().center()
         self.setGeometry(center.x() - int(self.width / 2), center.y() - int(self.height / 2), self.width, self.height)
 
