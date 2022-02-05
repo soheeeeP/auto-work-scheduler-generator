@@ -7,20 +7,28 @@ class WorkSchedulerGenerator:
     db = database
 
     def __init__(self):
-        self.term_count, self.worker_per_term, self.assistant_mode = self.db.config_repository.get_config
+        self.term_count, self.worker_per_term, self.assistant_mode = self.db.config_repository.get_config()
 
         self.weekday_workers = "weekday"
         self.holiday_workers = "holiday"
 
         if self.assistant_mode:
-            self.weekday_T, w_seniorLeft, w_juniorLeft = self.assistant_scheduler(queue=self.weekday_workers, days_cnt=5)
+            self.weekday_T, w_seniorLeft, w_juniorLeft = self.assistant_scheduler(
+                                                            queue=self.weekday_workers['queue'],
+                                                            days_cnt=5)
             w_workersLeft = [w_seniorLeft, w_juniorLeft]
 
-            self.holiday_T, h_seniorLeft, h_juniorLeft = self.assistant_scheduler(queue=self.holiday_workers, days_cnt=2)
+            self.holiday_T, h_seniorLeft, h_juniorLeft = self.assistant_scheduler(
+                                                            queue=self.holiday_workers['queue'],
+                                                            days_cnt=2)
             h_workersLeft = [h_seniorLeft, h_juniorLeft]
         else:
-            self.weekday_T, w_workersLeft = self.non_assistant_scheduler(queue=self.weekday_workers, days_cnt=5)
-            self.holiday_T, h_workersLeft = self.non_assistant_scheduler(queue=self.holiday_workers, days_cnt=2)
+            self.weekday_T, w_workersLeft = self.non_assistant_scheduler(
+                                                queue=self.weekday_workers['queue'],
+                                                days_cnt=5)
+            self.holiday_T, h_workersLeft = self.non_assistant_scheduler(
+                                                queue=self.holiday_workers['queue'],
+                                                days_cnt=2)
 
     @property
     def weekday_workers(self):
@@ -38,9 +46,16 @@ class WorkSchedulerGenerator:
     def holiday_workers(self, value):
         self._holiday_workers = self.get_workers(day=value)
 
+    @staticmethod
+    def calc_assigned_workers_cnt(table):   # TODO: time complexity 개선하기
+        x = 0
+        for t in table:
+            x += sum(len(_t) for _t in t)
+        return x
+
     def get_workers(self, day):
         sum_count = 0
-        max_work_count = self.db.work_mode_repository.get_max_work_count()[day]
+        max_work_count = self.db.user_repository.get_max_work_count()[day]
         key = "weekday" if day == "weekday" else "holiday"
 
         users = self.db.user_repository.get_work_mode_users()
@@ -48,7 +63,7 @@ class WorkSchedulerGenerator:
         users_work_count = {}
         for u in users:
             label = f"{u['id']}|{u['status'].lower()}"
-            diff = max_work_count - u[key]
+            diff = max_work_count - u[f'{key}_work_count']
             if diff > 0:
                 sum_count += diff
                 users_work_count[label] = diff
@@ -56,28 +71,40 @@ class WorkSchedulerGenerator:
         avg_count = sum_count // len(users_work_count)
 
         workers = {}
+        pre_workers = {}
         for k, v in users_work_count.items():
             if avg_count <= v:
                 workers[k] = v
+            else:
+                pre_workers[k] = v
 
-        workers_queue = sorted(workers.items(), key=operator.itemgetter(1))
+        workers_queue = {
+            "queue": sorted(workers.items(), key=operator.itemgetter(1), reverse=True),
+            "pre_queue": sorted(pre_workers.items(), key=operator.itemgetter(1), reverse=True)
+        }
+
         return workers_queue
 
     def generate_work_table(self, queue, table, days_cnt, worker_per_term):
-        total_needed_workers = (days_cnt * self.term_count) * worker_per_term
+        _table = table.copy()
 
-        while sum(q[1] for q in queue) > 0:
-            # TODO: table이 꽉 찬 경우, break (dp로 이차원 합 계산)
-            for worker in queue:
-                worker_key, work_value = worker[0], worker[1]
-                if work_value == 0:
+        _queue = queue if isinstance(queue, dict) else dict(queue)
+
+        total_needed_workers = (days_cnt * self.term_count) * worker_per_term
+        avg_count = total_needed_workers // len(_queue)
+
+        while True:
+            for key, value in _queue.items():
+                if self.calc_assigned_workers_cnt(_table) == total_needed_workers or sum(_queue.values()) == 0:
+                    return _table, _queue
+
+                if value == 0:
                     continue
 
-                if work_value < total_needed_workers:
-                    cnt = work_value
+                if value < avg_count:
+                    cnt = value
                 else:
-                    cnt = total_needed_workers
-                    work_value -= total_needed_workers
+                    cnt = avg_count
 
                 term = total_needed_workers // cnt
                 work_cnt = 0
@@ -91,57 +118,56 @@ class WorkSchedulerGenerator:
                     _idx = (idx + bias) if bias_mode else idx
                     row, col = _idx // self.term_count, _idx % self.term_count
 
-                    if len(table[row][col]) >= worker_per_term:
+                    if len(_table[row][col]) >= worker_per_term:
                         bias_mode = True
                         bias += 1
                     else:
-                        table[row][col].append(worker_key.split("|")[0])
+                        _table[row][col].append(int(key.split("|")[0]))
                         bias_mode = False
                         bias = 0
                         work_cnt += 1
-                        idx += term
+                        idx = _idx + term
 
-            return table, queue
+                _queue[key] -= work_cnt
 
     def non_assistant_scheduler(self, queue, days_cnt):
-        _table, _queue = self.generate_work_table(
+        return self.generate_work_table(
             queue=queue,
-            table=[[0] * self.term_count for i in range(days_cnt)],
+            table=[[[] for j in range(self.term_count)] for i in range(days_cnt)],
             days_cnt=days_cnt,
             worker_per_term=self.worker_per_term
         )
 
-        return _table, _queue
-
     def assistant_scheduler(self, queue, days_cnt):
-        table = [[0] * self.term_count for i in range(days_cnt)]
+        table = [[[] for j in range(self.term_count)] for i in range(days_cnt)]
 
         senior = {}
         junior = {}
 
         for worker in queue:
             key = worker[0].split("|")[1]
-            if key == "senior":
+            if key == "사수":
                 senior[worker[0]] = worker[1]
             else:
                 junior[worker[0]] = worker[1]
 
         senior_cnt, junior_cnt = 1, self.worker_per_term - 1
 
-        _table_with_senior, _senior = self.generate_work_table(
+        _senior_assigned_table, _senior_left = self.generate_work_table(
             queue=senior,
             table=table,
             days_cnt=days_cnt,
             worker_per_term=senior_cnt
         )
-        _table, _junior = self.generate_work_table(
-            queue=junior_cnt,
-            table=_table_with_senior,
+
+        _table, _junior_left = self.generate_work_table(
+            queue=junior,
+            table=_senior_assigned_table,
             days_cnt=days_cnt,
             worker_per_term=junior_cnt
         )
 
-        return _table, _senior, _junior
+        return _table, _senior_left, _junior_left
 
     def adjust_work_table(self):
         # TODO: 예외 관계 조정 & 중복 근무 수정 (금요일-토요일)
