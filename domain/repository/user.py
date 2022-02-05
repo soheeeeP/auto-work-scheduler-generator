@@ -189,3 +189,4 @@ class UserInMemoryRepository(UserRepository):
         while self.query.next():
             result.append(self.print_user_info_from_query())
         return result
+
