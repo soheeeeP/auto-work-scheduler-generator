@@ -435,14 +435,23 @@ class FileWidget(QWidget):
                 )
 
     def delete_row(self):
-        # FEATURE: 유저 row 삭제 구현하기
-        idx = self.table.selectionModel().selectedIndexes()
-        for i in idx:
-            print(i.row())
+        idx = self.table.selectedRanges()[0]
+        s, e = idx.topRow(), idx.bottomRow()
+
+        for i in range(s, e + 1):
+            self.db.user_repository.delete_user(user_id=self.data[i]['id'])
+
+        for i in range(e, s - 1, -1):
+            x = self.data.pop(i)
+            if x:
+                self.table.hideRow(i)
 
     def clear_db(self):
-        # FEATURE: db 전체 삭제
-        pass
+        users_cnt = len(self.data)
+
+        self.db.user_repository.delete_all_users()
+        for i in range(users_cnt):
+            self.table.hideRow(i)
 
     # TODO: table 크기에 맞게 widget/window 사이즈 조정
     def reset_widget(self, prev_table):
