@@ -78,12 +78,15 @@ class UserInMemoryRepository(UserRepository):
     def insert_new_user(self, data: UserData) -> int:
         self.query.prepare(
             """
-            INSERT INTO user(rank, name, status) VALUES (:rank, :name, :status);
+            INSERT INTO user(rank, name, status, weekday_work_count, holiday_work_count) 
+            VALUES (:rank, :name, :status, :weekday_work_count, :holiday_work_count);
             """
         )
-        self.query.bindValue(":rank", data[0])
-        self.query.bindValue(":name", data[1])
-        self.query.bindValue(":status", data[2])
+        self.query.bindValue(":rank", data["rank"])
+        self.query.bindValue(":name", data["name"])
+        self.query.bindValue(":status", data["status"])
+        self.query.bindValue(":weekday_work_count", data["weekday_work_count"])
+        self.query.bindValue(":holiday_work_count", data["holiday_work_count"])
         self.query.exec_()
 
         return self.query.lastInsertId()
