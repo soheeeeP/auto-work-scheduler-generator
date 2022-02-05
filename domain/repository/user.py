@@ -5,15 +5,15 @@ from domain.interface.user import UserRepository, UserData
 
 class UserInMemoryRepository(UserRepository):
     def print_user_info_from_query(self):
-        user_id, rank, name, status, weekday_work_count, holiday_week_count = \
-            self.query.value(0), \
-            self.query.value(1), \
-            self.query.value(2), \
-            self.query.value(3), \
-            self.query.value(4), \
-            self.query.value(5)
-
-        return UserData((user_id, rank, name, status, weekday_work_count, holiday_week_count))
+        data = {
+            "id": self.query.value(0),
+            "rank": self.query.value(1),
+            "name": self.query.value(2),
+            "status": self.query.value(3),
+            "weekday_work_count": self.query.value(4),
+            "holiday_work_count": self.query.value(5)
+        }
+        return UserData(data)
 
     def create_default_user_table(self):
         self.query.exec_(
@@ -24,7 +24,8 @@ class UserInMemoryRepository(UserRepository):
                 name VARCHAR (30) NOT NULL,
                 status VARCHAR (30) NOT NULL DEFAULT 'Default',
                 weekday_work_count INTEGER DEFAULT 0 CHECK ( weekday_work_count >= 0 ),
-                holiday_work_count INTEGER DEFAULT 0 CHECK ( holiday_work_count >= 0 )
+                holiday_work_count INTEGER DEFAULT 0 CHECK ( holiday_work_count >= 0 ),
+                work_mode VARCHAR (30) DEFAULT 'on' CHECK ( work_mode IN ('on', 'off(out)', 'off(exception)'))
             )
             """
         )
@@ -143,3 +144,49 @@ class UserInMemoryRepository(UserRepository):
             self.query.exec_(f"""UPDATE user SET {col} = '{col}' + 1 WHERE id='{user_id}';""")
         else:
             self.query.exec_(f"""UPDATE user SET {col} = '{col}' - 1 WHERE id='{user_id}';""")
+
+    def get_max_work_count(self):
+        self.query.exec_(
+            """
+            SELECT MAX(weekday_work_count) as max_week_count, MAX(holiday_work_count) as max_holiday_count FROM user;
+            """
+        )
+        if not self.query.first():
+            raise NameError(f'error while selecting max(week_count) value from user table')
+
+        work_count = {
+            "weekday": self.query.value(0),
+            "holiday": self.query.value(1)
+        }
+        return work_count
+
+    def get_min_work_count(self):
+        self.query.exec_(
+            """
+            SELECT MIN(weekday_work_count) as max_week_count, MIN(holiday_work_count) as max_holiday_count FROM user;
+            """
+        )
+        if not self.query.first():
+            raise NameError(f'error while selecting max(week_count) value from user table')
+
+        work_count = {
+            "weekday": self.query.value(0),
+            "holiday": self.query.value(1)
+        }
+        return work_count
+
+    def get_work_mode_users(self):
+        self.query.exec_(
+            """
+            SELECT * FROM user WHERE work_mode = 'on';
+            """
+        )
+
+        if not self.query.first():
+            raise NameError(f'error while selecting users')
+
+        result = []
+        while self.query.next():
+            result.append(self.print_user_info_from_query())
+        return result
+

@@ -2,7 +2,7 @@ from typing import List, Tuple, NewType, Union, Dict
 from abc import ABCMeta, abstractmethod
 
 # TODO: dict 활용하기
-UserData = NewType('UserData', Tuple)
+UserData = NewType('UserData', Dict)
 
 
 class UserRepository(metaclass=ABCMeta):
@@ -76,4 +76,16 @@ class UserRepository(metaclass=ABCMeta):
 
     @abstractmethod
     def update_user(self, user_id: int, user_data: Dict):
+        pass
+
+    @abstractmethod
+    def get_max_work_count(self):
+        pass
+
+    @abstractmethod
+    def get_min_work_count(self):
+        pass
+
+    @abstractmethod
+    def get_work_mode_users(self):
         pass
