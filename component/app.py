@@ -1,12 +1,16 @@
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction
 
-from component.widget import RadioButtonWidget
 from component.window import SubWindow, DBWindow
+from component.dialog import LogInDialog
 
 
 class WindowApplication(QMainWindow):
     def __init__(self, db):
         super().__init__()
+
+        dialog = LogInDialog()
+        dialog.exec_()
+
         self._db = db
 
         self.width = 720
