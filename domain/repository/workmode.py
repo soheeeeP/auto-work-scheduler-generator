@@ -13,7 +13,9 @@ class WorkModeInMemoryRepository(WorkModeRepository):
             "rank": record.indexOf("rank"),
             "name": record.indexOf("name"),
             "status": record.indexOf("status"),
-            "work_count": record.indexOf("work_count")
+            "weekday_work_count": record.indexOf("weekday_work_count"),
+            "holiday_work_count": record.indexOf("holiday_work_count"),
+            "work_mode": record.indexOf("work_mode")
         }
         return record, value_dict
 
@@ -46,8 +48,12 @@ class WorkModeInMemoryRepository(WorkModeRepository):
         if not self.query.first():
             raise NameError(f'user whose id is {user_id} does not exist')
 
-        for key, value in option.items():
-            self.query.exec_(f"""UPDATE workmode SET {key} = '{value}' WHERE user_id = '{user_id}';""")
+        del option['id']
+
+        keys = tuple(option.keys())
+        values = tuple(option.values())
+
+        self.query.exec_(f"""UPDATE workmode SET {keys} = {values} WHERE user_id = '{user_id}';""")
 
     def update_users_list_work_mode(self, options: List[WorkData]):
         for o in options:
@@ -64,7 +70,9 @@ class WorkModeInMemoryRepository(WorkModeRepository):
                 "rank": self.query.value(query_dict["rank"]),
                 "name": self.query.value(query_dict["name"]),
                 "status": self.query.value(query_dict["status"]),
-                "work_count": self.query.value(query_dict["work_count"])
+                "weekday_work_count": self.query.value(query_dict["weekday_work_count"]),
+                "holiday_work_count": self.query.value(query_dict["holiday_work_count"]),
+                "work_mode": self.query.value(query_dict["work_mode"])
             }
             for i in range(1, term_count + 1):
                 item[f"weekday_{i}"] = self.query.value(record.indexOf(f"weekday_{i}"))

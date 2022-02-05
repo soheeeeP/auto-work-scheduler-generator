@@ -4,7 +4,7 @@ import pathlib
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QRadioButton, QPushButton, QVBoxLayout, QHBoxLayout, QSpinBox, QLabel, QFileDialog, \
-    QTableWidget, QTableWidgetItem
+    QTableWidget, QTableWidgetItem, QMessageBox
 
 
 class RadioButtonWidget(QWidget):
@@ -188,7 +188,8 @@ class FileWidget(QWidget):
             "name": "이름",
             "status": "사수/부사수",
             "weekday_work_count": "평일 카운트",
-            "holiday_work_count": "주말 카운트"
+            "holiday_work_count": "주말 카운트",
+            "work_mode": "근무자"
         }
         self.label_for_db = {v: k for k, v in self.label_for_display.items()}
 
@@ -198,7 +199,7 @@ class FileWidget(QWidget):
             self.row, self.col, self.data = self.get_csv_file()
         else:
             self.data = self.db.work_mode_repository.get_all_users_work_mode_columns(term_count=self.term_count)
-            self.row, self.col = len(self.data), 4 + (2 * self.term_count) + 1
+            self.row, self.col = len(self.data), 1 + 6 + (2 * self.term_count)
 
             if mode == 'edit/view':
                 self.vbox.addWidget(self.edit)
@@ -280,6 +281,7 @@ class FileWidget(QWidget):
         if self.mode != 'register':
             headers.insert(0, 'id')
         self._table.setHorizontalHeaderLabels(headers)
+
         for i, _row in enumerate(data):
             for j, (key, val) in enumerate(_row.items()):
                 self._table.setItem(i, j, QTableWidgetItem(str(val)))
@@ -357,6 +359,10 @@ class FileWidget(QWidget):
         csv 파일에서 읽어온, 아직 db에 저장되지 않은 데이터로,
         user_data에 id값이 포함되어 있지 않음
         """
+        day_keys = {
+            "평일": "weekday",
+            "휴일": "holiday"
+        }
         user_list = []
         for i in range(self.row):
             user_data, work_mode_option = {}, {}
@@ -365,7 +371,12 @@ class FileWidget(QWidget):
                 if val in self.label_for_display.values():
                     user_data[self.label_for_db[val]] = self.table.item(i, j).text()
                 else:
-                    work_mode_option[val] = self.table.item(i, j).text()
+                    if val == "id":
+                        _val = val
+                    else:
+                        day, num = val.split("_")
+                        _val = day_keys[day] + "_" + num
+                    work_mode_option[_val] = int(self.table.item(i, j).text())
             user_list.append({
                 "data": user_data,
                 "work_mode_option": work_mode_option
@@ -392,40 +403,71 @@ class FileWidget(QWidget):
         return user_list
 
     def save_file(self):
-        user_list = self.get_table_cur_data()
-        print(user_list)
-        for user in user_list:
-            new_user_id = self.db.user_repository.insert_new_user(data=user["data"])
-            self.db.work_mode_repository.insert_user_work_mode(
-                user_id=new_user_id,
-                option=user["work_mode_option"]
-            )
+        message = QMessageBox.question(self, "QMessageBox", "저장하시겠습니까?", QMessageBox.No | QMessageBox.Yes)
+        if message == QMessageBox.Yes:
+            user_list = self.get_table_cur_data()
+
+            default_work_mode = {}
+            for i in range(self.term_count):
+                default_work_mode[f'weekday_{i + 1}'] = 1
+                default_work_mode[f'holiday_{i + 1}'] = 1
+
+            for user in user_list:
+                new_user_id = self.db.user_repository.insert_new_user(data=user["data"])
+                self.db.work_mode_repository.insert_user_work_mode(
+                    user_id=new_user_id,
+                    option=default_work_mode
+                )
+            self.close_widget()
+        else:
+            return
 
     def edit_db(self):
-        # FEATURE: 수정 전/후 데이터 구분하기
-        _user_list = self.get_table_raw_data()      # 수정되기 전의 data
-        new_user_list = self.get_table_cur_data()   # 현재 table에 저장되어 있는 data
-        for i, user in enumerate(_user_list):
-            user_id = user["data"]["id"]
-            if self.db.user_repository.get_user_by_id(user_id=user_id):
-                self.db.user_repository.update_user(
-                    user_id=user_id,
-                    user_data=new_user_list[i]["data"]
-                )
-                self.db.work_mode_repository.update_user_work_mode(
-                    user_id=user_id,
-                    option=user["work_mode_option"]
-                )
+        message = QMessageBox.question(self, "QMessageBox", "수정하시겠습니까?", QMessageBox.No | QMessageBox.Yes)
+        if message == QMessageBox.Yes:
+            _user_list = self.get_table_raw_data()      # 수정되기 전의 data
+            new_user_list = self.get_table_cur_data()   # 현재 table에 저장되어 있는 data
+
+            for i, user in enumerate(self.data):
+                user_id = user['id']
+                if self.db.user_repository.get_user_by_id(user_id=user_id):
+                    self.db.user_repository.update_user(
+                        user_id=user_id,
+                        user_data=new_user_list[i]["data"]
+                    )
+                    self.db.work_mode_repository.update_user_work_mode(
+                        user_id=user_id,
+                        option=new_user_list[i]["work_mode_option"]
+                    )
+        else:
+            return
 
     def delete_row(self):
-        # FEATURE: 유저 row 삭제 구현하기
-        idx = self.table.selectionModel().selectedIndexes()
-        for i in idx:
-            print(i.row())
+        message = QMessageBox.question(self, "QMessageBox", "데이터를 삭제하시겠습니까?", QMessageBox.No | QMessageBox.Yes)
+        if message == QMessageBox.Yes:
+            idx = self.table.selectedRanges()[0]
+            s, e = idx.topRow(), idx.bottomRow()
+
+            for i in range(s, e + 1):
+                self.db.user_repository.delete_user(user_id=self.data[i]['id'])
+
+            for i in range(e, s - 1, -1):
+                x = self.data.pop(i)
+                if x:
+                    self.table.hideRow(i)
+        else:
+            return
 
     def clear_db(self):
-        # FEATURE: db 전체 삭제
-        pass
+        message = QMessageBox.question(self, "QMessageBox", "전부 삭제하시겠습니까?", QMessageBox.No | QMessageBox.Yes)
+        if message == QMessageBox.Yes:
+            users_cnt = len(self.data)
+
+            self.db.user_repository.delete_all_users()
+            for i in range(users_cnt):
+                self.table.hideRow(i)
+        else:
+            return
 
     # TODO: table 크기에 맞게 widget/window 사이즈 조정
     def reset_widget(self, prev_table):
@@ -433,6 +475,9 @@ class FileWidget(QWidget):
             self.vbox.replaceWidget(prev_table, self.table)
         else:
             self.vbox.addWidget(self.table)
+
+    def close_widget(self):
+        self.window().close()
 
     @classmethod
     def init_db_register_widget(cls, db):
