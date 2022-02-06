@@ -5,6 +5,11 @@ from domain.interface.user import UserRepository
 from domain.interface.workmode import WorkModeRepository
 from domain.interface.schedule import ScheduleRepository
 
+from domain.repository.config import ConfigInMemoryRepository
+from domain.repository.schedule import ScheduleInMemoryRepository
+from domain.repository.user import UserInMemoryRepository
+from domain.repository.workmode import WorkModeInMemoryRepository
+
 
 class DataBase(object):
     def __init__(self, db_name: str):
@@ -102,3 +107,13 @@ class DataBase(object):
         self.user_repository.create_default_user_table()
         self.work_mode_repository.create_work_mode_table(term_count=term_count)
         self.schedule_repository.create_schedule_table()
+
+
+database = DataBase(db_name='test.db')
+database.connect_in_memory_repositories(
+        config_repository=ConfigInMemoryRepository(),
+        user_repository=UserInMemoryRepository(),
+        work_mode_repository=WorkModeInMemoryRepository(),
+        schedule_repository=ScheduleInMemoryRepository()
+    )
+database.create_db_tables()

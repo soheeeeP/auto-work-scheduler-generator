@@ -4,52 +4,34 @@ from component.widget import RadioButtonWidget, FileWidget
 
 
 class SubWindow(QMainWindow):
-    def __init__(self, parent=None, mode=None, db=None, default=None):
+    def __init__(self, parent=None, mode=None):
         super(SubWindow, self).__init__(parent)
-        self.mode = mode
-        self.db = db
+
         self.width = 240
         self.height = 180
-        self.center = QDesktopWidget().availableGeometry().center()
-        self.rectangle = self.frameGeometry()
 
-        # 화면 크기, 위치 설정
-        self.setGeometry(0, 0, self.width, self.height)
-        self.rectangle.moveCenter(self.center)
-        self.move(self.rectangle.topLeft())
+        self.setupLayout()
 
-        if mode == 'worker':
-            radio_widget = RadioButtonWidget.worker_widget(db=db, val=default)
-        elif mode == 'work_shift':
-            radio_widget = RadioButtonWidget.work_shift_widget(db=db, val=default)
-        elif mode == 'assistant':
-            radio_widget = RadioButtonWidget.assistant_widget(db=db, val=default)
-        else:
-            return
+        radio_widget = RadioButtonWidget.init_widget(mode=mode)
         self.setCentralWidget(radio_widget)
+
+    def setupLayout(self):
+        center = QDesktopWidget().availableGeometry().center()
+        self.setGeometry(center.x() - int(self.width / 2), center.y() - int(self.height / 2), self.width, self.height)
 
 
 class DBWindow(QMainWindow):
-    def __init__(self, parent=None, mode=None, db=None):
+    def __init__(self, parent=None, mode=None):
         super(DBWindow, self).__init__(parent)
-        self.mode = mode
-        self.db = db
+
         self.width = 480
         self.height = 640
-        self.center = QDesktopWidget().availableGeometry().center()
-        self.rectangle = self.frameGeometry()
 
-        self.setGeometry(0, 0, self.width, self.height)
-        self.rectangle.moveCenter(self.center)
-        self.move(self.rectangle.topLeft())
+        self.setupLayout()
 
-        # TODO: file_widget 위치 조정
-        if mode == 'register':
-            file_widget = FileWidget.init_db_register_widget(db=db)
-        elif mode == 'edit/view':
-            file_widget = FileWidget.init_db_edit_widget(db=db)
-        elif mode == 'delete':
-            file_widget = FileWidget.init_db_delete_widget(db=db)
-        else:
-            return
+        file_widget = FileWidget.init_db_widget(mode=mode)
         self.setCentralWidget(file_widget)
+
+    def setupLayout(self):
+        center = QDesktopWidget().availableGeometry().center()
+        self.setGeometry(center.x() - int(self.width / 2), center.y() - int(self.height / 2), self.width, self.height)
