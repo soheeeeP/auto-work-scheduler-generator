@@ -81,19 +81,19 @@ class WindowApplication(QMainWindow):
         self.setupMenuBar()
 
     def workerPerTerm(self):
-        SubWindow(self, 'worker', self.db, self.worker_per_term).show()
+        SubWindow(self, 'worker', self.worker_per_term).show()
 
     def assistantMode(self):
-        SubWindow(self, 'assistant', self.db, self.assistant_mode).show()
+        SubWindow(self, 'assistant', self.assistant_mode).show()
 
     def workShiftTerm(self):
-        SubWindow(self, 'work_shift', self.db, self.term_count).show()
+        SubWindow(self, 'work_shift', self.term_count).show()
 
     def registerDB(self):
-        DBWindow(self, 'register', self.db).show()
+        DBWindow(self, 'register').show()
 
     def editDB(self):
-        DBWindow(self, 'edit/view', self.db).show()
+        DBWindow(self, 'edit/view').show()
 
     def deleteDB(self):
-        DBWindow(self, 'delete', self.db).show()
+        DBWindow(self, 'delete').show()

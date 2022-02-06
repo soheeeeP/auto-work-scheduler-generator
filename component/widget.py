@@ -6,8 +6,12 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QRadioButton, QPushButton, QVBoxLayout, QHBoxLayout, QSpinBox, QLabel, QFileDialog, \
     QTableWidget, QTableWidgetItem, QMessageBox
 
+from db import database
+
 
 class RadioButtonWidget(QWidget):
+    db = database
+
     def __init__(self, parent=None):
         super(RadioButtonWidget, self).__init__(parent)
 
@@ -20,8 +24,7 @@ class RadioButtonWidget(QWidget):
         self.vbox = QVBoxLayout()
         self.radio_box = QHBoxLayout()
 
-    def __call__(self, _db, val, mode, message):
-        self.db = _db
+    def __call__(self, val, mode, message):
         self.val = val
 
         self.label_title = message
@@ -135,26 +138,27 @@ class RadioButtonWidget(QWidget):
         self.window().close()
 
     @classmethod
-    def worker_widget(cls, db, val):
+    def worker_widget(cls, val):
         widget = cls()
-        widget(db, val, 'worker', '시간당 근무 인원수')
+        widget(val, 'worker', '시간당 근무 인원수')
         return widget
 
     @classmethod
-    def work_shift_widget(cls, db, val):
+    def work_shift_widget(cls, val):
         widget = cls()
-        widget(db, val, 'work_shift', '근무 교대')
+        widget(val, 'work_shift', '근무 교대')
         return widget
 
     @classmethod
-    def assistant_widget(cls, db, val):
+    def assistant_widget(cls, val):
         widget = cls()
-        widget(db, val, 'assistant', '사수 / 부사수 모드')
+        widget(val, 'assistant', '사수 / 부사수 모드')
         return widget
 
 
 class FileWidget(QWidget):
     mode = None
+    db = database
 
     def __init__(self, parent=None):
         super(FileWidget, self).__init__(parent)
@@ -178,8 +182,7 @@ class FileWidget(QWidget):
         self._table = None
         self._row, self._col, self._data = None, None, None
 
-    def __call__(self, _db, mode):
-        self.db = _db
+    def __call__(self, mode):
         self.mode = mode
         self.term_count = self.db.config_repository.get_config()[0]
 
@@ -439,6 +442,7 @@ class FileWidget(QWidget):
                         user_id=user_id,
                         option=new_user_list[i]["work_mode_option"]
                     )
+            self.close_widget()
         else:
             return
 
@@ -480,19 +484,19 @@ class FileWidget(QWidget):
         self.window().close()
 
     @classmethod
-    def init_db_register_widget(cls, db):
+    def init_db_register_widget(cls):
         widget = cls()
-        widget(db, 'register')
+        widget('register')
         return widget
 
     @classmethod
-    def init_db_edit_widget(cls, db):
+    def init_db_edit_widget(cls):
         widget = cls()
-        widget(db, 'edit/view')
+        widget('edit/view')
         return widget
 
     @classmethod
-    def init_db_delete_widget(cls, db):
+    def init_db_delete_widget(cls):
         widget = cls()
-        widget(db, 'delete')
+        widget('delete')
         return widget
