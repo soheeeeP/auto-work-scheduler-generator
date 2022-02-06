@@ -1,4 +1,34 @@
+import pyrebase
+import os
+import hashlib
+from base64 import b64encode, b64decode
+
+from dotenv import load_dotenv
+
 from PyQt5.QtWidgets import QPushButton, QLineEdit, QGridLayout, QDialog, QLabel, QDesktopWidget, QMessageBox
+
+load_dotenv()
+
+config = {
+    "apiKey": os.environ.get("apiKey"),
+    "authDomain": os.environ.get("authDomain"),
+    "databaseURL": os.environ.get("databaseURL"),
+    "projectId": os.environ.get("projectId"),
+    "storageBucket": os.environ.get("storageBucket"),
+    "messagingSenderId": os.environ.get("messagingSenderId"),
+    "appId": os.environ.get("appId")
+}
+
+firebase = pyrebase.initialize_app(config)
+db = firebase.database()
+
+
+def setCriticalMessageBox(window, message):
+    box = QMessageBox.critical(window, "QMessageBox", message, QMessageBox.Close)
+
+    center = QDesktopWidget().availableGeometry().center()
+    window.setGeometry(center.x() - int(window.width / 2), center.y() - int(window.height / 2), window.width, window.height)
+    return box
 
 
 class LogInDialog(QDialog):
@@ -10,6 +40,7 @@ class LogInDialog(QDialog):
 
         self.id_entry = QLineEdit()
         self.pw_entry = QLineEdit()
+        self.pw_entry.setEchoMode(QLineEdit.Password)
 
         self.sign_in = "로그인"
         self.sign_up = "회원가입"
@@ -61,17 +92,46 @@ class LogInDialog(QDialog):
         self.setLayout(layout)
 
     def signInClicked(self):
-        self.window().close()
-        """
-        1. id, password 로 관리자 조회
-        2. 일치하면 로그인, 메인 메뉴 접근
-            (로그인하지 않은 경우, 메뉴 접근 제한)
-        3. 일치하지 않으면 QMessageBox.warning
-        """
+        _identification = self.id_entry.text()
+        _passwd = self.pw_entry.text()
+
+        user = db.child("admin").child(_identification).get()
+        if user.val() is None:
+            messagebox = setCriticalMessageBox(self, "존재하지 않는 사용자입니다.")
+            self.id_entry.setText('')
+            self.pw_entry.setText('')
+            return
+
+        val = dict(user.val())
+
+        if val['blocked']:
+            messagebox = setCriticalMessageBox(self, "정지된 계정입니다.")
+            self.id_entry.setText('')
+            self.pw_entry.setText('')
+            return
+
+        pw_confirm = val['passWd']
+
+        new_key = hashlib.pbkdf2_hmac(
+            'sha256',
+            _passwd.encode('utf-8'),
+            b64decode(pw_confirm['salt']),
+            100000
+        )
+
+        if b64decode(pw_confirm['key']) != new_key:
+            messagebox = setCriticalMessageBox(self, "비밀번호가 일치하지 않습니다.")
+            self.pw_entry.setText('')
+            return
+
+        self.close()
 
     def signUpClicked(self):
         r = RegisterDialog()
         r.exec_()
+
+        self.id_entry.setText(r.id_entry.text())
+        self.pw_entry.setText(r.pw_entry.text())
 
     def closeEvent(self, event):
         if self.id_entry.text() == '' or self.pw_entry.text() == '':
@@ -88,9 +148,13 @@ class RegisterDialog(QDialog):
         self.height = 250
 
         self.id_entry = QLineEdit()
-        self.pw_entry = QLineEdit()
-        self.pw_confirm_entry = QLineEdit()
         self.access_code = QLineEdit()
+
+        self.pw_entry = QLineEdit()
+        self.pw_entry.setEchoMode(QLineEdit.Password)
+
+        self.pw_confirm_entry = QLineEdit()
+        self.pw_confirm_entry.setEchoMode(QLineEdit.Password)
 
         self.register = "계정 생성하기"
         self.register.clicked.connect(self.register_clicked)
@@ -139,19 +203,48 @@ class RegisterDialog(QDialog):
 
         self.setLayout(layout)
 
+    @staticmethod
+    def make_password(passwd):
+        salt = os.urandom(64)
+        key = hashlib.pbkdf2_hmac(
+            'sha256',
+            passwd.encode('utf-8'),
+            salt,
+            100000
+        )
+
+        _passwd = {
+            'key': b64encode(key).decode('utf-8'),
+            'salt': b64encode(salt).decode('utf-8')
+        }
+        return _passwd
+
     def register_clicked(self):
+        _identification = self.id_entry.text()
+        _access_code = self.access_code.text()
+
+        validation = db.child("admin").child(_identification).get()
+        if validation.val():
+            messagebox = setCriticalMessageBox(self, "이미 생성된 계정입니다.")
+            self.id_entry.setText('')
+            self.pw_entry.setText('')
+            self.pw_confirm_entry.setText('')
+            self.access_code.setText('')
+            return
+
         passwd = self.pw_entry.text()
         passwd_confirm = self.pw_confirm_entry.text()
         if passwd != passwd_confirm:
-            QMessageBox.critical(self, "QMessageBox", "비밀번호가 일치하지 않습니다.", QMessageBox.Close)
+            messagebox = setCriticalMessageBox(self, "비밀번호가 일치하지 않습니다.")
+            self.pw_entry.setText('')
+            self.pw_confirm_entry.setText('')
+            self.access_code.setText('')
+            return
 
-        identification = self.id_entry.text()
-        code = self.access_code.text()
-
-        """
-        1. identification 중복 여부 확인
-        2. password 암호화
-        3. 계정 생성
-        """
+        db.child("admin").child(_identification).update({
+            "passWd": self.make_password(passwd),
+            "accessCode": _access_code,
+            "blocked": False
+        })
 
         self.close()
