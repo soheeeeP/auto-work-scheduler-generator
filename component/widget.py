@@ -491,3 +491,18 @@ class FileWidget(QWidget):
         widget(mode)
 
         return widget
+
+
+class OptionWidget(QWidget):
+    def __init__(self, parent=None):
+        super(OptionWidget, self).__init__(parent)
+
+    def __call__(self, mode):
+        pass
+
+    @classmethod
+    def init_option_widget(cls, mode):
+        widget = cls()
+        widget(mode)
+
+        return widget

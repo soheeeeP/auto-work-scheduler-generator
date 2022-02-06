@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget
 
-from component.widget import RadioButtonWidget, FileWidget
+from component.widget import RadioButtonWidget, FileWidget, OptionWidget
 
 
 class SubWindow(QMainWindow):
@@ -31,6 +31,23 @@ class DBWindow(QMainWindow):
 
         file_widget = FileWidget.init_db_widget(mode=mode)
         self.setCentralWidget(file_widget)
+
+    def setupLayout(self):
+        center = QDesktopWidget().availableGeometry().center()
+        self.setGeometry(center.x() - int(self.width / 2), center.y() - int(self.height / 2), self.width, self.height)
+
+
+class ProgramOptionWindow(QMainWindow):
+    def __init__(self, parent=None, mode=None):
+        super(ProgramOptionWindow, self).__init__(parent)
+
+        self.width = 480
+        self.height = 360
+
+        self.setupLayout()
+
+        program_option_widget = OptionWidget.init_option_widget(mode=mode)
+        self.setCentralWidget(program_option_widget)
 
     def setupLayout(self):
         center = QDesktopWidget().availableGeometry().center()

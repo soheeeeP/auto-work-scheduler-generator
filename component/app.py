@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction
 
-from component.window import SubWindow, DBWindow
+from component.window import SubWindow, DBWindow, ProgramOptionWindow
 from component.dialog import LogInDialog
 
 
@@ -50,13 +50,18 @@ class WindowApplication(QMainWindow):
         deleteDBMenu.triggered.connect(self.deleteDB)
 
         option_menu = menu_bar.addMenu("추가사항")
-        outsideTheBarrackMenu = QAction("영외인원 등록 및 수정", self)
-        exceptionMenu = QAction("열외인원 등록 및 수정", self)
-        specialRelationMenu = QAction("특수관계 등록 및 수정", self)
 
+        outsideTheBarrackMenu = QAction("영외인원 등록 및 수정", self)
         option_menu.addAction(outsideTheBarrackMenu)
+        outsideTheBarrackMenu.triggered.connect(self.outsideOption)
+
+        exceptionMenu = QAction("열외인원 등록 및 수정", self)
         option_menu.addAction(exceptionMenu)
+        exceptionMenu.triggered.connect(self.exceptionOption)
+
+        specialRelationMenu = QAction("특수관계 등록 및 수정", self)
         option_menu.addAction(specialRelationMenu)
+        specialRelationMenu.triggered.connect(self.specialRelationOption)
 
         save_menu = menu_bar.addMenu("저장")
 
@@ -91,3 +96,12 @@ class WindowApplication(QMainWindow):
 
     def deleteDB(self):
         DBWindow(self, 'delete').show()
+
+    def outsideOption(self):
+        ProgramOptionWindow(self, 'outside').show()
+
+    def exceptionOption(self):
+        ProgramOptionWindow(self, 'exception').show()
+
+    def specialRelationOption(self):
+        ProgramOptionWindow(self, 'special_relation').show()
