@@ -3,12 +3,8 @@ from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction
 from component.window import SubWindow, DBWindow
 from component.dialog import LogInDialog
 
-from db import database
-
 
 class WindowApplication(QMainWindow):
-    db = database
-
     def __init__(self):
         super().__init__()
 
@@ -20,8 +16,6 @@ class WindowApplication(QMainWindow):
 
         self.setupLayout()
 
-        self.term_count, self.worker_per_term, self.assistant_mode \
-            = self.db.config_repository.get_config()
         self.show()
 
     def setupMenuBar(self):
@@ -81,13 +75,13 @@ class WindowApplication(QMainWindow):
         self.setupMenuBar()
 
     def workerPerTerm(self):
-        SubWindow(self, 'worker', self.worker_per_term).show()
+        SubWindow(self, 'worker').show()
 
     def assistantMode(self):
-        SubWindow(self, 'assistant', self.assistant_mode).show()
+        SubWindow(self, 'assistant').show()
 
     def workShiftTerm(self):
-        SubWindow(self, 'work_shift', self.term_count).show()
+        SubWindow(self, 'work_shift').show()
 
     def registerDB(self):
         DBWindow(self, 'register').show()

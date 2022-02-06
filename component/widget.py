@@ -12,6 +12,12 @@ from db import database
 class RadioButtonWidget(QWidget):
     db = database
 
+    message_dict = {
+        "worker": "시간당 근무 인원수",
+        "work_shift": "근무 교대",
+        "assistant": "사수 / 부사수 모드"
+    }
+
     def __init__(self, parent=None):
         super(RadioButtonWidget, self).__init__(parent)
 
@@ -24,15 +30,18 @@ class RadioButtonWidget(QWidget):
         self.vbox = QVBoxLayout()
         self.radio_box = QHBoxLayout()
 
-    def __call__(self, val, mode, message):
-        self.val = val
+    def __call__(self, mode):
+        self.term_count, self.worker_per_term, self.assistant_mode \
+            = self.db.config_repository.get_config()
 
-        self.label_title = message
+        self.label_title = self.message_dict[mode]
         self.label_title.setAlignment(Qt.AlignCenter)
         self.save_button = '저장하기'
 
         # TODO: config constraints를 동적으로 가져오도록 수정
         if mode == 'worker':
+            val = self.worker_per_term
+
             self.worker = {
                 '1_worker': QRadioButton('1명'),
                 '2_worker': QRadioButton('2명'),
@@ -46,6 +55,8 @@ class RadioButtonWidget(QWidget):
             self._save_button.clicked.connect(self.save_worker_config_value_in_db)
 
         elif mode == 'work_shift':
+            val = self.term_count
+
             self.work_shift = {
                 '1_work_shift': QRadioButton('1교대'),
                 '2_work_shift': QRadioButton('2교대'),
@@ -61,8 +72,10 @@ class RadioButtonWidget(QWidget):
             self._save_button.clicked.connect(self.save_work_shift_config_value_in_db)
 
         else:
+            val = self.assistant_mode
+
             self.on_radio_button, self.off_radio_button = '설정', '해제'
-            self._on_radio_button.setChecked(True) if self.val else self._off_radio_button.setChecked(True)
+            self._on_radio_button.setChecked(True) if val else self._off_radio_button.setChecked(True)
 
             self.radio_box.addWidget(self.on_radio_button)
             self.radio_box.addWidget(self.off_radio_button)
@@ -138,21 +151,10 @@ class RadioButtonWidget(QWidget):
         self.window().close()
 
     @classmethod
-    def worker_widget(cls, val):
+    def init_widget(cls, mode):
         widget = cls()
-        widget(val, 'worker', '시간당 근무 인원수')
-        return widget
+        widget(mode)
 
-    @classmethod
-    def work_shift_widget(cls, val):
-        widget = cls()
-        widget(val, 'work_shift', '근무 교대')
-        return widget
-
-    @classmethod
-    def assistant_widget(cls, val):
-        widget = cls()
-        widget(val, 'assistant', '사수 / 부사수 모드')
         return widget
 
 
@@ -484,19 +486,8 @@ class FileWidget(QWidget):
         self.window().close()
 
     @classmethod
-    def init_db_register_widget(cls):
+    def init_db_widget(cls, mode):
         widget = cls()
-        widget('register')
-        return widget
+        widget(mode)
 
-    @classmethod
-    def init_db_edit_widget(cls):
-        widget = cls()
-        widget('edit/view')
-        return widget
-
-    @classmethod
-    def init_db_delete_widget(cls):
-        widget = cls()
-        widget('delete')
         return widget
