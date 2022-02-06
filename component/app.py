@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction
 
-from component.window import SubWindow, DBWindow, ProgramOptionWindow
+from component.window import MenuWindow
 from component.dialog import LogInDialog
 
 
@@ -80,28 +80,28 @@ class WindowApplication(QMainWindow):
         self.setupMenuBar()
 
     def workerPerTerm(self):
-        SubWindow(self, 'worker').show()
+        MenuWindow.menu_window(self, 'config', 'worker', 240, 180).show()
 
     def assistantMode(self):
-        SubWindow(self, 'assistant').show()
+        MenuWindow.menu_window(self, 'config', 'assistant', 240, 180).show()
 
     def workShiftTerm(self):
-        SubWindow(self, 'work_shift').show()
+        MenuWindow.menu_window(self, 'config', 'work_shift', 240, 180).show()
 
     def registerDB(self):
-        DBWindow(self, 'register').show()
+        MenuWindow.menu_window(self, 'db', 'register', 480, 640).show()
 
     def editDB(self):
-        DBWindow(self, 'edit/view').show()
+        MenuWindow.menu_window(self, 'db', 'edit/view', 480, 640).show()
 
     def deleteDB(self):
-        DBWindow(self, 'delete').show()
+        MenuWindow.menu_window(self, 'db', 'delete', 480, 640).show()
 
     def outsideOption(self):
-        ProgramOptionWindow(self, 'outside').show()
+        MenuWindow.menu_window(self, 'option', 'outside', 480, 360).show()
 
     def exceptionOption(self):
-        ProgramOptionWindow(self, 'exception').show()
+        MenuWindow.menu_window(self, 'option', 'exception', 480, 360).show()
 
     def specialRelationOption(self):
-        ProgramOptionWindow(self, 'special_relation').show()
+        MenuWindow.menu_window(self, 'option', 'special_relation', 480, 360).show()
