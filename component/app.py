@@ -3,15 +3,17 @@ from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction
 from component.window import SubWindow, DBWindow
 from component.dialog import LogInDialog
 
+from db import database
+
 
 class WindowApplication(QMainWindow):
-    def __init__(self, db):
+    db = database
+
+    def __init__(self):
         super().__init__()
 
         dialog = LogInDialog()
         dialog.exec_()
-
-        self._db = db
 
         self.width = 720
         self.height = 540

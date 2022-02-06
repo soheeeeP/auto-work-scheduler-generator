@@ -1,6 +1,6 @@
 import operator
 
-from main import database
+from db import database
 
 
 class WorkSchedulerGenerator:
