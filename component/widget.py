@@ -580,8 +580,9 @@ class OptionWidget(QWidget):
     @user_listbox.setter
     def user_listbox(self, value):
         self._user_listbox = QListWidget()
-        for v in value:
-            self._user_listbox.addItem(v["name"])
+        if value:
+            for v in value:
+                self._user_listbox.addItem(v["name"])
 
     def __call__(self, mode):
         if mode == 'special_relation':
