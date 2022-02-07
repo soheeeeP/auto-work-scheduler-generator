@@ -535,6 +535,7 @@ class OptionWidget(QWidget):
         layout = QGridLayout()
         layout.addLayout(search_layout, 0, 0)
         layout.addLayout(listbox_layout, 1, 0)
+        layout.setContentsMargins(40, 30, 40, 30)
 
         self.setLayout(layout)
 
