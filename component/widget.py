@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QWidget, QRadioButton, QPushButton, QVBoxLayout, QHB
     QTableWidget, QTableWidgetItem, QMessageBox
 
 from db import database
+import settings
 
 
 class RadioButtonWidget(QWidget):

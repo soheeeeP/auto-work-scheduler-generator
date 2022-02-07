@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction
 
 from component.window import MenuWindow
 from component.dialog import LogInDialog
+from settings import login
 
 
 class WindowApplication(QMainWindow):
@@ -10,6 +11,8 @@ class WindowApplication(QMainWindow):
 
         dialog = LogInDialog()
         dialog.exec_()
+
+        login(dialog.login_user_data)
 
         self.width = 720
         self.height = 540

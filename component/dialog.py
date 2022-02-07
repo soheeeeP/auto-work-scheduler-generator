@@ -34,6 +34,7 @@ def setCriticalMessageBox(window, message):
 class LogInDialog(QDialog):
     def __init__(self):
         super().__init__()
+        self.login_user_data = None
 
         self.width = 300
         self.height = 200
@@ -48,6 +49,14 @@ class LogInDialog(QDialog):
         self.sign_up.clicked.connect(self.signUpClicked)
 
         self.setupLayout()
+
+    @property
+    def login_user_data(self):
+        return self._login_user_data
+
+    @login_user_data.setter
+    def login_user_data(self, value):
+        self._login_user_data = value
 
     @property
     def sign_in(self):
@@ -123,6 +132,11 @@ class LogInDialog(QDialog):
             messagebox = setCriticalMessageBox(self, "비밀번호가 일치하지 않습니다.")
             self.pw_entry.setText('')
             return
+
+        user_data = val.copy()
+        user_data['id'] = _identification
+
+        self.login_user_data = user_data
 
         self.close()
 
