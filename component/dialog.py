@@ -262,3 +262,64 @@ class RegisterDialog(QDialog):
         })
 
         self.close()
+
+
+class AdminDialog(QDialog):
+    def __init__(self, parent=None, login_user=None):
+        super().__init__(parent)
+        print(login_user)
+
+        self.login_user = login_user
+        self.access_approval = False
+
+        self.width = 300
+        self.height = 200
+
+        self.code_entry = QLineEdit()
+        self.code_entry.setEchoMode(QLineEdit.Password)
+
+        self.authenticate = '인증하기'
+        self.authenticate.clicked.connect(self.validate_access_code)
+
+        self.setupLayout()
+
+    @property
+    def authenticate(self):
+        return self._authenticate
+
+    @authenticate.setter
+    def authenticate(self, value):
+        self._authenticate = QPushButton(value)
+
+    def setupLayout(self):
+        center = QDesktopWidget().availableGeometry().center()
+        self.setGeometry(center.x() - int(self.width / 2), center.y() - int(self.height / 2), self.width, self.height)
+
+        self.setWindowTitle("관리자 인증하기")
+
+        code_label = QLabel("접근 코드: ")
+
+        entry_layout = QGridLayout()
+        entry_layout.addWidget(code_label, 0, 0)
+        entry_layout.addWidget(self.code_entry, 0, 1)
+
+        button_layout = QGridLayout()
+        button_layout.addWidget(self.authenticate, 0, 0)
+
+        layout = QGridLayout()
+        layout.addLayout(entry_layout, 0, 0)
+        layout.addLayout(button_layout, 1, 0)
+        layout.setContentsMargins(50, 20, 50, 20)
+
+        self.setLayout(layout)
+
+    def validate_access_code(self):
+        _access_code = self.code_entry.text()
+
+        if _access_code != self.login_user["accessCode"]:
+            messagebox = setCriticalMessageBox(self, "코드가 일치하지 않습니다.")
+            self.code_entry.setText('')
+            return
+
+        self.access_approval = True
+        self.close()

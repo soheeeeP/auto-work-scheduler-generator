@@ -107,4 +107,6 @@ class WindowApplication(QMainWindow):
         MenuWindow.menu_window(self, 'option', 'exception', 480, 360).show()
 
     def specialRelationOption(self):
-        MenuWindow.menu_window(self, 'option', 'special_relation', 480, 360).show()
+        window = MenuWindow.menu_window(self, 'option', 'special_relation', 480, 360)
+        if window:
+            window.show()

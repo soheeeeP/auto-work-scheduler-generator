@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QWidget, QRadioButton, QPushButton, QVBoxLayout, QHB
     QTableWidget, QTableWidgetItem, QMessageBox
 
 from db import database
+from component.dialog import AdminDialog
 import settings
 
 
@@ -499,11 +500,22 @@ class OptionWidget(QWidget):
         super(OptionWidget, self).__init__(parent)
 
     def __call__(self, mode):
+        if mode == 'special_relation':
+            admin = AdminDialog(login_user=settings.login_user)
+            admin.exec_()
+
+            if admin.access_approval is False:
+                return False
+
+        elif mode == 'outside':
+            pass
+        elif mode == 'exception':
+            pass
         pass
 
     @classmethod
     def init_option_widget(cls, mode):
         widget = cls()
-        widget(mode)
 
-        return widget
+        success = widget(mode)
+        return widget if success else None

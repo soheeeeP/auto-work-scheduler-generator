@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QDesktopWidget
+from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QWidget
 
 from component.widget import RadioButtonWidget, FileWidget, OptionWidget
 
@@ -22,7 +22,11 @@ class MenuWindow(QMainWindow):
         else:
             return
 
+        if isinstance(widget, QWidget) is False:
+            return False
+
         self.setCentralWidget(widget)
+        return True
 
     def setupLayout(self):
         center = QDesktopWidget().availableGeometry().center()
@@ -31,6 +35,6 @@ class MenuWindow(QMainWindow):
     @classmethod
     def menu_window(cls, w, typeof_widget, mode, width, height):
         _window = cls(w, width, height)
-        _window(typeof_widget, mode)
 
-        return _window
+        success = _window(typeof_widget, mode)
+        return _window if success else None
