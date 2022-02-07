@@ -34,7 +34,7 @@ class UserRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_user_by_name(self, name: str) -> Union[UserData, NameError]:
+    def get_user_by_name(self, name: str) -> Union[List[UserData], None]:
         pass
 
     @abstractmethod
