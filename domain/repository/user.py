@@ -48,12 +48,15 @@ class UserInMemoryRepository(UserRepository):
         self.print_user_info_from_query()
         return True
 
-    def get_user_by_name(self, name: str) -> Union[UserData, NameError]:
-        self.query.exec_(f"""SELECT * FROM user WHERE name='{name}';""")
-        if not self.query.first():
-            raise NameError(f'user whose name is {name} does not exist')
+    def get_user_by_name(self, name: str) -> Union[List[UserData], None]:
+        self.query.prepare(f"""SELECT * FROM user WHERE name LIKE (:search_name);""")
+        self.query.bindValue(":search_name", f'%{name}%')
+        self.query.exec_()
 
-        return self.print_user_info_from_query()
+        result = []
+        while self.query.next():
+            result.append(self.print_user_info_from_query())
+        return result
 
     def get_users_by_rank(self, rank: str) -> Union[List[UserData], NameError]:
         self.query.exec_(f"""SELECT * FROM user WHERE rank='{rank}';""")

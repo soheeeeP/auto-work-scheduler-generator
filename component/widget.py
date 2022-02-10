@@ -4,9 +4,11 @@ import pathlib
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QRadioButton, QPushButton, QVBoxLayout, QHBoxLayout, QSpinBox, QLabel, QFileDialog, \
-    QTableWidget, QTableWidgetItem, QMessageBox
+    QTableWidget, QTableWidgetItem, QMessageBox, QLineEdit, QListWidget, QGridLayout
 
 from db import database
+from component.dialog import AdminDialog
+import settings
 
 
 class RadioButtonWidget(QWidget):
@@ -491,3 +493,129 @@ class FileWidget(QWidget):
         widget(mode)
 
         return widget
+
+
+class OptionWidget(QWidget):
+    db = database
+
+    def __init__(self, parent=None):
+        super(OptionWidget, self).__init__(parent)
+
+        self.listbox_data = self.db.user_repository.get_all_users()
+
+        self.search_content = QLineEdit()
+        self.search_button = "검색"
+        self.search_button.clicked.connect(self.display_users_name_in_listbox)
+
+        self.user_listbox = self.listbox_data
+
+        self.add_button = "추가"
+        self.remove_button = "삭제"
+        self.save_button = "저장"
+
+        self.selected_box = QListWidget()
+
+        self.setupLayout()
+
+    def setupLayout(self):
+        button_layout = QGridLayout()
+        button_layout.addWidget(self.add_button, 0, 0)
+        button_layout.addWidget(self.remove_button, 1, 0)
+        button_layout.addWidget(self.save_button, 2, 0)
+
+        search_layout = QGridLayout()
+        search_layout.addWidget(self.search_content, 0, 0)
+        search_layout.addWidget(self.search_button, 0, 1)
+
+        listbox_layout = QGridLayout()
+        listbox_layout.addWidget(self.user_listbox, 0, 0)
+        listbox_layout.addLayout(button_layout, 0, 1)
+        listbox_layout.addWidget(self.selected_box, 0, 2)
+
+        layout = QGridLayout()
+        layout.addLayout(search_layout, 0, 0)
+        layout.addLayout(listbox_layout, 1, 0)
+        layout.setContentsMargins(40, 30, 40, 30)
+
+        self.setLayout(layout)
+
+    @property
+    def search_button(self):
+        return self._search_button
+
+    @search_button.setter
+    def search_button(self, value):
+        self._search_button = QPushButton(value)
+
+    @property
+    def save_button(self):
+        return self._save_button
+
+    @save_button.setter
+    def save_button(self, value):
+        self._save_button = QPushButton(value)
+
+    @property
+    def add_button(self):
+        return self._add_button
+
+    @add_button.setter
+    def add_button(self, value):
+        self._add_button = QPushButton(value)
+        self._add_button.setStyleSheet("")
+
+    @property
+    def remove_button(self):
+        return self._remove_button
+
+    @remove_button.setter
+    def remove_button(self, value):
+        self._remove_button = QPushButton(value)
+        self._remove_button.setStyleSheet("")
+
+    @property
+    def user_listbox(self):
+        return self._user_listbox
+
+    @user_listbox.setter
+    def user_listbox(self, value):
+        self._user_listbox = QListWidget()
+        if value:
+            for v in value:
+                self._user_listbox.addItem(v["name"])
+
+    def __call__(self, mode):
+        if mode == 'special_relation':
+            admin = AdminDialog(login_user=settings.login_user)
+            admin.exec_()
+
+            if admin.access_approval is False:
+                return False
+
+        elif mode == 'outside':
+            pass
+        elif mode == 'exception':
+            pass
+        return True
+
+    def display_users_name_in_listbox(self):
+        q = self.search_content.text()
+        if q == '':
+            self.listbox_data = self.db.user_repository.get_all_users()
+        else:
+            self.listbox_data = self.db.user_repository.get_user_by_name(name=q)
+
+        self.user_listbox.clear()
+
+        if self.listbox_data:
+            for d in self.listbox_data:
+                self.user_listbox.addItem(d["name"])
+        else:
+            print('검색 결과가 없습니다.')
+
+    @classmethod
+    def init_option_widget(cls, mode):
+        widget = cls()
+
+        success = widget(mode)
+        return widget if success else None

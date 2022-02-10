@@ -1,7 +1,8 @@
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction
 
-from component.window import SubWindow, DBWindow
+from component.window import MenuWindow
 from component.dialog import LogInDialog
+from settings import login
 
 
 class WindowApplication(QMainWindow):
@@ -10,6 +11,8 @@ class WindowApplication(QMainWindow):
 
         dialog = LogInDialog()
         dialog.exec_()
+
+        login(dialog.login_user_data)
 
         self.width = 720
         self.height = 540
@@ -50,13 +53,18 @@ class WindowApplication(QMainWindow):
         deleteDBMenu.triggered.connect(self.deleteDB)
 
         option_menu = menu_bar.addMenu("추가사항")
-        outsideTheBarrackMenu = QAction("영외인원 등록 및 수정", self)
-        exceptionMenu = QAction("열외인원 등록 및 수정", self)
-        specialRelationMenu = QAction("특수관계 등록 및 수정", self)
 
+        outsideTheBarrackMenu = QAction("영외인원 등록 및 수정", self)
         option_menu.addAction(outsideTheBarrackMenu)
+        outsideTheBarrackMenu.triggered.connect(self.outsideOption)
+
+        exceptionMenu = QAction("열외인원 등록 및 수정", self)
         option_menu.addAction(exceptionMenu)
+        exceptionMenu.triggered.connect(self.exceptionOption)
+
+        specialRelationMenu = QAction("특수관계 등록 및 수정", self)
         option_menu.addAction(specialRelationMenu)
+        specialRelationMenu.triggered.connect(self.specialRelationOption)
 
         save_menu = menu_bar.addMenu("저장")
 
@@ -75,19 +83,30 @@ class WindowApplication(QMainWindow):
         self.setupMenuBar()
 
     def workerPerTerm(self):
-        SubWindow(self, 'worker').show()
+        MenuWindow.menu_window(self, 'config', 'worker', 240, 180).show()
 
     def assistantMode(self):
-        SubWindow(self, 'assistant').show()
+        MenuWindow.menu_window(self, 'config', 'assistant', 240, 180).show()
 
     def workShiftTerm(self):
-        SubWindow(self, 'work_shift').show()
+        MenuWindow.menu_window(self, 'config', 'work_shift', 240, 180).show()
 
     def registerDB(self):
-        DBWindow(self, 'register').show()
+        MenuWindow.menu_window(self, 'db', 'register', 480, 640).show()
 
     def editDB(self):
-        DBWindow(self, 'edit/view').show()
+        MenuWindow.menu_window(self, 'db', 'edit/view', 480, 640).show()
 
     def deleteDB(self):
-        DBWindow(self, 'delete').show()
+        MenuWindow.menu_window(self, 'db', 'delete', 480, 640).show()
+
+    def outsideOption(self):
+        MenuWindow.menu_window(self, 'option', 'outside', 480, 360).show()
+
+    def exceptionOption(self):
+        MenuWindow.menu_window(self, 'option', 'exception', 480, 360).show()
+
+    def specialRelationOption(self):
+        window = MenuWindow.menu_window(self, 'option', 'special_relation', 480, 360)
+        if window:
+            window.show()
