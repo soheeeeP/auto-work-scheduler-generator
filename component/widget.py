@@ -2,9 +2,10 @@ import csv
 import pandas as pd
 import pathlib
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QDate
 from PyQt5.QtWidgets import QWidget, QRadioButton, QPushButton, QVBoxLayout, QHBoxLayout, QSpinBox, QLabel, QFileDialog, \
-    QTableWidget, QTableWidgetItem, QMessageBox, QLineEdit, QListWidget, QGridLayout
+    QTableWidget, QTableWidgetItem, QMessageBox, QLineEdit, QListWidget, QGridLayout, QTreeWidget, QTreeWidgetItem, \
+    QHeaderView, QDateEdit
 
 from db import database
 from component.dialog import AdminDialog
@@ -498,6 +499,18 @@ class FileWidget(QWidget):
 class OptionWidget(QWidget):
     db = database
 
+    window_title_dict = {
+        "outside": "영외 인원 등록히가",
+        "exception": "열외 인원 등록하기",
+        "special_relation": "예외 관계 설정하기"
+    }
+
+    tree_widget_header_dict = {
+        "outside": ["이름", "출발일", "복귀일"],
+        "exception": ["이름", "일자", "시간대"],
+        "special_relation": ["사용자1", "사용자2"]
+    }
+
     def __init__(self, parent=None):
         super(OptionWidget, self).__init__(parent)
 
@@ -513,23 +526,22 @@ class OptionWidget(QWidget):
         self.remove_button = "삭제"
         self.save_button = "저장"
 
-        self.selected_box = QListWidget()
+        self.selected_box = QTreeWidget()
 
         self.setupLayout()
 
     def setupLayout(self):
-        button_layout = QGridLayout()
-        button_layout.addWidget(self.add_button, 0, 0)
-        button_layout.addWidget(self.remove_button, 1, 0)
-        button_layout.addWidget(self.save_button, 2, 0)
-
         search_layout = QGridLayout()
         search_layout.addWidget(self.search_content, 0, 0)
         search_layout.addWidget(self.search_button, 0, 1)
 
         listbox_layout = QGridLayout()
         listbox_layout.addWidget(self.user_listbox, 0, 0)
-        listbox_layout.addLayout(button_layout, 0, 1)
+
+        listbox_layout.addWidget(self.add_button, 0, 1)
+        listbox_layout.addWidget(self.remove_button, 1, 1)
+        listbox_layout.addWidget(self.save_button, 2, 1)
+
         listbox_layout.addWidget(self.selected_box, 0, 2)
 
         layout = QGridLayout()
@@ -538,6 +550,21 @@ class OptionWidget(QWidget):
         layout.setContentsMargins(40, 30, 40, 30)
 
         self.setLayout(layout)
+
+    def setModeSpecifiedLayout(self):
+        self.window().setWindowTitle(self.window_title_dict[self.mode])
+
+        header_labels = self.tree_widget_header_dict[self.mode]
+        self.selected_box.setHeaderLabels(header_labels)
+
+        self.selected_box.header().setSectionResizeMode(QHeaderView.Stretch)
+        if len(header_labels) == 2:
+            self.selected_box.header().resizeSection(0, 50)
+            self.selected_box.header().resizeSection(1, 50)
+        elif len(header_labels) == 3:
+            self.selected_box.header().resizeSection(0, 20)
+            self.selected_box.header().resizeSection(1, 40)
+            self.selected_box.header().resizeSection(2, 40)
 
     @property
     def search_button(self):
@@ -585,6 +612,9 @@ class OptionWidget(QWidget):
                 self._user_listbox.addItem(v["name"])
 
     def __call__(self, mode):
+        self.mode = mode
+        self.setModeSpecifiedLayout()
+
         if mode == 'special_relation':
             admin = AdminDialog(login_user=settings.login_user)
             admin.exec_()
@@ -592,10 +622,6 @@ class OptionWidget(QWidget):
             if admin.access_approval is False:
                 return False
 
-        elif mode == 'outside':
-            pass
-        elif mode == 'exception':
-            pass
         return True
 
     def display_users_name_in_listbox(self):
