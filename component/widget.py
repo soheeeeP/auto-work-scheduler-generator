@@ -523,8 +523,11 @@ class OptionWidget(QWidget):
         self.user_listbox = self.listbox_data
 
         self.add_button = "추가"
+        self.add_button.clicked.connect(self.add_item_to_select_box)
         self.remove_button = "삭제"
+        self.remove_button.clicked.connect(self.remove_item_from_select_box)
         self.save_button = "저장"
+        self.save_button.clicked.connect(self.save_relation_to_db)
 
         self.selected_box = QTreeWidget()
 
@@ -638,6 +641,33 @@ class OptionWidget(QWidget):
                 self.user_listbox.addItem(d["name"])
         else:
             print('검색 결과가 없습니다.')
+
+    def add_item_to_select_box(self):
+        name = self.user_listbox.selectedItems()[0].text()
+        self.user_listbox.takeItem(self.user_listbox.currentRow())
+
+        tree_widget_item = QTreeWidgetItem()
+        tree_widget_item.setText(0, name)
+
+        self.selected_box.addTopLevelItem(tree_widget_item)
+
+        departure = QDateEdit()
+        departure.setDate(QDate.currentDate())
+        self.selected_box.setItemWidget(tree_widget_item, 1, departure)
+
+        arrival = QDateEdit()
+        arrival.setDate(QDate.currentDate().addDays(7))
+        self.selected_box.setItemWidget(tree_widget_item, 2, arrival)
+
+    def remove_item_from_select_box(self):
+        row = self.selected_box.currentIndex().row()
+        removed_item = self.selected_box.takeTopLevelItem(row)
+
+        name = removed_item.text(0)
+        self.user_listbox.addItem(name)
+
+    def save_relation_to_db(self):
+        pass
 
     @classmethod
     def init_option_widget(cls, mode):
