@@ -4,6 +4,21 @@ from component.widget import RadioButtonWidget, FileWidget, OptionWidget
 
 
 class MenuWindow(QMainWindow):
+
+    window_title_dict = {
+        "config": None,
+        "db": {
+            "register": "파일 등록하기",
+            "edit/view": "데이터베이스 수정하기",
+            "delete": "데이터베이스 삭제하기"
+        },
+        "option": {
+            "outside": "영외 인원 등록하기",
+            "exception": "열외 인원 등록하기",
+            "special_relation": "예외 관계 설정하기"
+        }
+    }
+
     def __init__(self, parent: QMainWindow, width: int, height: int):
         super(MenuWindow, self).__init__(parent)
 
@@ -13,6 +28,7 @@ class MenuWindow(QMainWindow):
         self.setupLayout()
 
     def __call__(self, typeof_widget, mode):
+        self.setWindowTitle(self.window_title_dict[typeof_widget][mode])
         if typeof_widget == "config":
             widget = RadioButtonWidget.init_widget(mode=mode)
         elif typeof_widget == "db":
