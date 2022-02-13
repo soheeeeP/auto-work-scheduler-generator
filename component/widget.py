@@ -539,9 +539,13 @@ class OptionWidget(QWidget):
         listbox_layout = QGridLayout()
         listbox_layout.addWidget(self.user_listbox, 0, 0)
 
-        listbox_layout.addWidget(self.add_button, 0, 1)
-        listbox_layout.addWidget(self.remove_button, 1, 1)
-        listbox_layout.addWidget(self.save_button, 2, 1)
+        row = 0
+        if self.mode != "special_relation":
+            listbox_layout.addWidget(self.add_button, row, 1)
+            row += 1
+
+        listbox_layout.addWidget(self.remove_button, row, 1)
+        listbox_layout.addWidget(self.save_button, row + 1, 1)
 
         listbox_layout.addWidget(self.selected_box, 0, 2)
 
@@ -610,6 +614,9 @@ class OptionWidget(QWidget):
             if admin.access_approval is False:
                 return False
 
+            self.user_listbox.setDragMode(mode)
+            self.selected_box.setDropMode()
+
         return True
 
     def display_users_name_in_listbox(self):
@@ -621,11 +628,18 @@ class OptionWidget(QWidget):
 
         self.user_listbox.clear()
 
-        if self.listbox_data:
-            for d in self.listbox_data:
-                self.user_listbox.addItem(d["name"])
-        else:
+        if self.listbox_data is None:
             print('검색 결과가 없습니다.')
+
+        selected_names = []
+        for i in range(self.selected_box.topLevelItemCount()):
+            selected_names.append(self.selected_box.topLevelItem(i).text(0))
+
+        for d in self.listbox_data:
+            name = d["name"]
+            if self.mode != "special_relation" and name in selected_names:
+                continue
+            self.user_listbox.addItem(name)
 
     def add_item_to_select_box(self):
         name = self.user_listbox.selectedItems()[0].text()
@@ -662,8 +676,9 @@ class OptionWidget(QWidget):
         row = self.selected_box.currentIndex().row()
         removed_item = self.selected_box.takeTopLevelItem(row)
 
-        name = removed_item.text(0)
-        self.user_listbox.addItem(name)
+        if self.mode != "special_relation":
+            name = removed_item.text(0)
+            self.user_listbox.addItem(name)
 
     def save_relation_to_db(self):
         pass
