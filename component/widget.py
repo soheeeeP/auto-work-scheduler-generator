@@ -529,9 +529,7 @@ class OptionWidget(QWidget):
         self.save_button = "저장"
         self.save_button.clicked.connect(self.save_relation_to_db)
 
-        self.selected_box = QTreeWidget()
-
-        self.setupLayout()
+        self.selected_box = TreeWidget.tree_widget()
 
     def setupLayout(self):
         search_layout = QGridLayout()
@@ -609,10 +607,7 @@ class OptionWidget(QWidget):
 
     @user_listbox.setter
     def user_listbox(self, value):
-        self._user_listbox = QListWidget()
-        if value:
-            for v in value:
-                self._user_listbox.addItem(v["name"])
+        self._user_listbox = ListWidget().list_widget(value)
 
     def __call__(self, mode):
         self.mode = mode
@@ -675,3 +670,85 @@ class OptionWidget(QWidget):
 
         success = widget(mode)
         return widget if success else None
+
+
+class ListWidget(QListWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def __call__(self, value):
+        if value is None:
+            return
+        for v in value:
+            self.addItem(v["name"])
+
+    def dragEnterEvent(self, event):
+        name = event.source().selectedItems()[0].text()
+        event.accept()
+
+    def setDragMode(self, menu):
+        self.setDragDropMode(QAbstractItemView.DragOnly)
+
+        if menu == "special_relation":
+            self.setDefaultDropAction(Qt.CopyAction)
+        else:
+            self.setDefaultDropAction(Qt.MoveAction)
+
+        self.setAcceptDrops(True)
+        self.setDragEnabled(True)
+
+    @classmethod
+    def list_widget(cls, value):
+        widget = cls()
+        widget(value)
+        return widget
+
+
+class TreeWidget(QTreeWidget):
+    def __init__(self, parent=None):
+        super(TreeWidget, self).__init__(parent)
+
+    def setDropMode(self):
+        self.setDragDropMode(QAbstractItemView.DropOnly)
+        self.setDefaultDropAction(Qt.MoveAction)
+        self.setAcceptDrops(True)
+        self.setDragEnabled(False)
+
+    def dropEvent(self, event):
+        idx = self.indexAt(event.pos())
+        row, col = idx.row(), idx.column()
+
+        new_name = event.source().selectedItems()[0].text()
+        self.addTreeWidgetItem(row, col, new_name)
+        event.accept()
+
+    def addTreeWidgetItem(self, row, col, value):
+        if row == -1 or col == -1:
+            item = QTreeWidgetItem()
+            item.setText(0, value)
+            self.addTopLevelItem(item)
+        elif col == 1:
+            item = self.topLevelItem(row)
+            if item:
+                item.setText(col, value)
+
+    def setTreeWidgetHeader(self, labels):
+        self.setHeaderLabels(labels)
+
+        self.header().setSectionResizeMode(QHeaderView.Stretch)
+        if len(labels) == 2:
+            self.header().resizeSection(0, 50)
+            self.header().resizeSection(1, 50)
+        elif len(labels) == 3:
+            self.header().resizeSection(0, 20)
+            self.header().resizeSection(1, 40)
+            self.header().resizeSection(2, 40)
+        elif len(labels) == 4:
+            self.header().resizeSection(0, 20)
+            self.header().resizeSection(1, 40)
+            self.header().resizeSection(2, 20)
+            self.header().resizeSection(3, 20)
+
+    @classmethod
+    def tree_widget(cls):
+        return cls()
