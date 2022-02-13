@@ -2,10 +2,10 @@ import csv
 import pandas as pd
 import pathlib
 
-from PyQt5.QtCore import Qt, QDate
+from PyQt5.QtCore import Qt, QDate, QTime
 from PyQt5.QtWidgets import QWidget, QRadioButton, QPushButton, QVBoxLayout, QHBoxLayout, QSpinBox, QLabel, QFileDialog, \
     QTableWidget, QTableWidgetItem, QMessageBox, QLineEdit, QListWidget, QGridLayout, QTreeWidget, QTreeWidgetItem, \
-    QHeaderView, QDateEdit
+    QHeaderView, QDateEdit, QTimeEdit, QAbstractItemView
 
 from db import database
 from component.dialog import AdminDialog
@@ -507,7 +507,7 @@ class OptionWidget(QWidget):
 
     tree_widget_header_dict = {
         "outside": ["이름", "출발일", "복귀일"],
-        "exception": ["이름", "일자", "시간대"],
+        "exception": ["이름", "일자", "시작시간", "종료시간"],
         "special_relation": ["사용자1", "사용자2"]
     }
 
@@ -551,21 +551,6 @@ class OptionWidget(QWidget):
         layout.setContentsMargins(40, 30, 40, 30)
 
         self.setLayout(layout)
-
-    def setModeSpecifiedLayout(self):
-        self.window().setWindowTitle(self.window_title_dict[self.mode])
-
-        header_labels = self.tree_widget_header_dict[self.mode]
-        self.selected_box.setHeaderLabels(header_labels)
-
-        self.selected_box.header().setSectionResizeMode(QHeaderView.Stretch)
-        if len(header_labels) == 2:
-            self.selected_box.header().resizeSection(0, 50)
-            self.selected_box.header().resizeSection(1, 50)
-        elif len(header_labels) == 3:
-            self.selected_box.header().resizeSection(0, 20)
-            self.selected_box.header().resizeSection(1, 40)
-            self.selected_box.header().resizeSection(2, 40)
 
     @property
     def search_button(self):
@@ -611,7 +596,12 @@ class OptionWidget(QWidget):
 
     def __call__(self, mode):
         self.mode = mode
-        self.setModeSpecifiedLayout()
+        self.term_count = self.db.config_repository.get_config()[0]
+
+        header_labels = self.tree_widget_header_dict[self.mode]
+        self.selected_box.setTreeWidgetHeader(header_labels)
+
+        self.setupLayout()
 
         if mode == 'special_relation':
             admin = AdminDialog(login_user=settings.login_user)
@@ -650,9 +640,23 @@ class OptionWidget(QWidget):
         departure.setDate(QDate.currentDate())
         self.selected_box.setItemWidget(tree_widget_item, 1, departure)
 
-        arrival = QDateEdit()
-        arrival.setDate(QDate.currentDate().addDays(7))
-        self.selected_box.setItemWidget(tree_widget_item, 2, arrival)
+        if self.mode == 'outside':
+            arrival = QDateEdit()
+            arrival.setDate(QDate.currentDate().addDays(7))
+            self.selected_box.setItemWidget(tree_widget_item, 2, arrival)
+        elif self.mode == 'exception':
+            start_time = QTimeEdit()
+            start_time.setTime(QTime.currentTime())
+            start_time.setTimeRange(QTime(0, 00, 00), QTime(23, 59, 59))
+            start_time.setDisplayFormat('hh:mm')
+
+            end_time = QTimeEdit()
+            end_time.setTime(QTime.currentTime().addSecs(60 * 60 * (24 / self.term_count)))
+            end_time.setTimeRange(QTime(0, 00, 00), QTime(23, 59, 59))
+            end_time.setDisplayFormat('hh:mm')
+
+            self.selected_box.setItemWidget(tree_widget_item, 2, start_time)
+            self.selected_box.setItemWidget(tree_widget_item, 3, end_time)
 
     def remove_item_from_select_box(self):
         row = self.selected_box.currentIndex().row()
