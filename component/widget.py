@@ -499,12 +499,6 @@ class FileWidget(QWidget):
 class OptionWidget(QWidget):
     db = database
 
-    window_title_dict = {
-        "outside": "영외 인원 등록히가",
-        "exception": "열외 인원 등록하기",
-        "special_relation": "예외 관계 설정하기"
-    }
-
     tree_widget_header_dict = {
         "outside": ["이름", "출발일", "복귀일"],
         "exception": ["이름", "일자", "시작시간", "종료시간"],
