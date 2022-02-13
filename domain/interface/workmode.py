@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, NewType, Tuple, Dict, Union
 from abc import ABCMeta, abstractmethod
 
@@ -42,4 +43,8 @@ class WorkModeRepository(metaclass=ABCMeta):
 
     @abstractmethod
     def get_user_work_mode_column(self, user_id: int, term_count: int) -> Union[Dict, NameError]:
+        pass
+
+    @abstractmethod
+    def update_exp_datetime(self, user_id: int, start: datetime, end: datetime):
         pass

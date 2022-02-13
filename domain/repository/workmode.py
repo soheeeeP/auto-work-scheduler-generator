@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Union, Dict
 
 from PyQt5.QtSql import QSqlQuery
@@ -25,6 +26,8 @@ class WorkModeInMemoryRepository(WorkModeRepository):
             CREATE TABLE if NOT EXISTS workmode (
                 workmode_id INTEGER primary key autoincrement,
                 user_id INTEGER,
+                exp_start_datetime DATETIME DEFAULT NULL,
+                exp_end_datetime DATETIME DEFAULT NULL,
                 foreign key (user_id) REFERENCES user(id)
             )
             """
@@ -98,3 +101,16 @@ class WorkModeInMemoryRepository(WorkModeRepository):
             item[f"holiday_{i}"] = self.query.value(record.indexOf(f"holiday_{i}"))
 
         return item
+
+    def update_exp_datetime(self, user_id: int, start: datetime, end: datetime):
+        self.query.prepare(
+            f"""
+            UPDATE workmode 
+            SET (exp_start_datetime, exp_end_datetime) = (:exp_start_datetime, :exp_end_datetime) 
+            WHERE user_id='{user_id}';
+            """
+        )
+        self.query.bindValue(":exp_start_datetime", start)
+        self.query.bindValue(":exp_end_datetime", end)
+
+        self.query.exec_()
