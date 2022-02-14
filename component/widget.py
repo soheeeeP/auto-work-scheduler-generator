@@ -4,7 +4,7 @@ import pathlib
 
 from PyQt5.QtCore import Qt, QDate, QTime
 from PyQt5.QtWidgets import QWidget, QRadioButton, QPushButton, QVBoxLayout, QHBoxLayout, QSpinBox, QLabel, QFileDialog, \
-    QTableWidget, QTableWidgetItem, QMessageBox, QLineEdit, QListWidget, QGridLayout, QTreeWidget, QTreeWidgetItem, \
+    QTableWidget, QTableWidgetItem, QMessageBox, QLineEdit, QGridLayout, QTreeWidget, QTreeWidgetItem, \
     QHeaderView, QDateEdit, QTimeEdit, QAbstractItemView
 
 from db import database
@@ -500,9 +500,9 @@ class OptionWidget(QWidget):
     db = database
 
     tree_widget_header_dict = {
-        "outside": ["이름", "출발일", "복귀일"],
-        "exception": ["이름", "일자", "시작시간", "종료시간"],
-        "special_relation": ["사용자1", "사용자2"]
+        "outside": ["id", "이름", "출발일", "복귀일"],
+        "exception": ["id", "이름", "일자", "시작시간", "종료시간"],
+        "special_relation": ["id1", "사용자1", "id2", "사용자2"]
     }
 
     def __init__(self, parent=None):
@@ -514,16 +514,11 @@ class OptionWidget(QWidget):
         self.search_button = "검색"
         self.search_button.clicked.connect(self.display_users_name_in_listbox)
 
-        self.user_listbox = self.listbox_data
-
         self.add_button = "추가"
         self.add_button.clicked.connect(self.add_item_to_select_box)
         self.remove_button = "삭제"
         self.remove_button.clicked.connect(self.remove_item_from_select_box)
         self.save_button = "저장"
-        self.save_button.clicked.connect(self.save_relation_to_db)
-
-        self.selected_box = TreeWidget.tree_widget()
 
     def setupLayout(self):
         search_layout = QGridLayout()
@@ -584,22 +579,19 @@ class OptionWidget(QWidget):
         self._remove_button = QPushButton(value)
         self._remove_button.setStyleSheet("")
 
-    @property
-    def user_listbox(self):
-        return self._user_listbox
-
-    @user_listbox.setter
-    def user_listbox(self, value):
-        self._user_listbox = ListWidget().list_widget(value)
+    # @property
+    # def user_listbox(self):
+    #     return self._user_listbox
+    #
+    # @user_listbox.setter
+    # def user_listbox(self, value):
+    #     self._user_listbox = DragTreeWidget().list_widget(value)
 
     def __call__(self, mode):
         self.mode = mode
         self.term_count = self.db.config_repository.get_config()[0]
 
-        header_labels = self.tree_widget_header_dict[self.mode]
-        self.selected_box.setTreeWidgetHeader(header_labels)
-
-        self.setupLayout()
+        header_labels = self.tree_widget_header_dict[mode]
 
         if mode == 'special_relation':
             admin = AdminDialog(login_user=settings.login_user)
@@ -607,9 +599,25 @@ class OptionWidget(QWidget):
 
             if admin.access_approval is False:
                 return False
+            self.save_button.clicked.connect(self.save_relation_to_db)
 
+            exp_data = self.db.user_repository.get_all_exp_relation()
+        else:
+            self.save_button.clicked.connect(self.save_exp_datetime_to_db)
+
+            exp_data = self.db.work_mode_repository.get_exp_datetime_exists_users()
+
+        self.selected_box = DropTreeWidget.tree_widget(mode, exp_data)
+        self.selected_box.setTreeWidgetHeader(header_labels)
+
+        self.user_listbox = DragTreeWidget.list_widget()
+        self.display_users_name_in_listbox()
+
+        if mode == 'special_relation':
             self.user_listbox.setDragMode(mode)
             self.selected_box.setDropMode()
+
+        self.setupLayout()
 
         return True
 
@@ -624,34 +632,59 @@ class OptionWidget(QWidget):
 
         if self.listbox_data is None:
             print('검색 결과가 없습니다.')
+            return
+
+        items = []
+        if self.mode == 'special_relation':
+            for d in self.listbox_data:
+                user_id, name = d["id"], d["name"]
+                i = QTreeWidgetItem()
+                i.setText(0, str(user_id))
+                i.setText(1, name)
+
+                items.append(i)
+            self.user_listbox.addTopLevelItems(items)
+            return
 
         selected_names = []
         for i in range(self.selected_box.topLevelItemCount()):
-            selected_names.append(self.selected_box.topLevelItem(i).text(0))
+            selected_names.append(self.selected_box.topLevelItem(i).text(1))
 
         for d in self.listbox_data:
-            name = d["name"]
-            if self.mode != "special_relation" and name in selected_names:
-                continue
-            self.user_listbox.addItem(name)
+            user_id, name = d["id"], d["name"]
+            if name not in selected_names:
+                i = QTreeWidgetItem()
+                i.setText(0, str(user_id))
+                i.setText(1, name)
+
+                items.append(i)
+
+        self.user_listbox.addTopLevelItems(items)
+        return
 
     def add_item_to_select_box(self):
-        name = self.user_listbox.selectedItems()[0].text()
-        self.user_listbox.takeItem(self.user_listbox.currentRow())
+        item = self.user_listbox.selectedItems()[0]
+        user_id, name = item.text(0), item.text(1)
+        print(user_id)
+        print(name)
+
+        row = self.user_listbox.currentIndex().row()
+        removed_from_userbox = self.user_listbox.takeTopLevelItem(row)
 
         tree_widget_item = QTreeWidgetItem()
-        tree_widget_item.setText(0, name)
+        tree_widget_item.setText(0, user_id)
+        tree_widget_item.setText(1, name)
 
         self.selected_box.addTopLevelItem(tree_widget_item)
 
         departure = QDateEdit()
         departure.setDate(QDate.currentDate())
-        self.selected_box.setItemWidget(tree_widget_item, 1, departure)
+        self.selected_box.setItemWidget(tree_widget_item, 2, departure)
 
         if self.mode == 'outside':
             arrival = QDateEdit()
             arrival.setDate(QDate.currentDate().addDays(7))
-            self.selected_box.setItemWidget(tree_widget_item, 2, arrival)
+            self.selected_box.setItemWidget(tree_widget_item, 3, arrival)
         elif self.mode == 'exception':
             start_time = QTimeEdit()
             start_time.setTime(QTime.currentTime())
@@ -663,8 +696,8 @@ class OptionWidget(QWidget):
             end_time.setTimeRange(QTime(0, 00, 00), QTime(23, 59, 59))
             end_time.setDisplayFormat('hh:mm')
 
-            self.selected_box.setItemWidget(tree_widget_item, 2, start_time)
-            self.selected_box.setItemWidget(tree_widget_item, 3, end_time)
+            self.selected_box.setItemWidget(tree_widget_item, 3, start_time)
+            self.selected_box.setItemWidget(tree_widget_item, 4, end_time)
 
     def remove_item_from_select_box(self):
         row = self.selected_box.currentIndex().row()
@@ -674,8 +707,70 @@ class OptionWidget(QWidget):
             name = removed_item.text(0)
             self.user_listbox.addItem(name)
 
+    def get_drop_widget_data(self):
+        cnt = self.selected_box.columnCount()
+
+        _data = []
+        for i in range(self.selected_box.topLevelItemCount()):
+            item = self.selected_box.topLevelItem(i)
+
+            row_data = {}
+            for j in range(cnt):
+                item_widget = self.selected_box.itemWidget(item, j)
+                row_data[self.tree_widget_header_dict[self.mode][j]] = item_widget.text() if item_widget else item.text(j)
+            _data.append(row_data)
+
+        return _data
+
+    def save_exp_datetime_to_db(self):
+        _data = self.get_drop_widget_data()
+        if _data is None:
+            print('저장할 데이터가 없습니다')
+            return
+
+        if self.mode == "outside":
+            for d in _data:
+                if d["출발일"] > d["복귀일"]:
+                    print("잘못된 날짜 설정 옵션입니다. 저장할 수 없습니다.")
+                    continue
+
+                self.db.work_mode_repository.update_exp_datetime(
+                    user_id=d["id"],
+                    start=d["출발일"] + " " + "00:00",
+                    end=d["복귀일"] + " " + "23:59"
+                )
+        elif self.mode == "exception":
+            for d in _data:
+                if d["시작시간"] > d["종료시간"]:
+                    print("잘못된 시간 설정 옵션입니다. 저장할 수 없습니다.")
+                    continue
+
+                self.db.work_mode_repository.update_exp_datetime(
+                    user_id=d["id"],
+                    start=d["일자"] + " " + d["시작시간"],
+                    end=d["일자"] + " " + d["종료시간"]
+                )
+
+        self.close_widget()
+
     def save_relation_to_db(self):
-        pass
+        _data = self.get_drop_widget_data()
+        if _data is None:
+            print('저장할 데이터가 없습니다')
+            return
+
+        for d in _data:
+            self.db.user_repository.insert_exp_relation(
+                user_1_id=d["id1"],
+                user_1_name=d["사용자1"],
+                user_2_id=d["id2"],
+                user_2_name=d["사용자2"]
+            )
+
+        self.close_widget()
+
+    def close_widget(self):
+        self.window().close()
 
     @classmethod
     def init_option_widget(cls, mode):
@@ -685,18 +780,12 @@ class OptionWidget(QWidget):
         return widget if success else None
 
 
-class ListWidget(QListWidget):
+class DragTreeWidget(QTreeWidget):
     def __init__(self, parent=None):
-        super().__init__(parent)
-
-    def __call__(self, value):
-        if value is None:
-            return
-        for v in value:
-            self.addItem(v["name"])
+        super(DragTreeWidget, self).__init__(parent)
+        self.setTreeWidgetHeader()
 
     def dragEnterEvent(self, event):
-        name = event.source().selectedItems()[0].text()
         event.accept()
 
     def setDragMode(self, menu):
@@ -710,16 +799,72 @@ class ListWidget(QListWidget):
         self.setAcceptDrops(True)
         self.setDragEnabled(True)
 
+    def setTreeWidgetHeader(self):
+        self.setHeaderLabels(["아이디", "이름"])
+        self.header().setSectionResizeMode(QHeaderView.Stretch)
+
+        self.hideColumn(0)
+
     @classmethod
-    def list_widget(cls, value):
+    def list_widget(cls):
         widget = cls()
-        widget(value)
         return widget
 
 
-class TreeWidget(QTreeWidget):
+class DropTreeWidget(QTreeWidget):
     def __init__(self, parent=None):
-        super(TreeWidget, self).__init__(parent)
+        super(DropTreeWidget, self).__init__(parent)
+
+    def __call__(self, mode, value):
+        self.mode = mode
+
+        if mode == "special_relation":
+            for v in value:
+                item = QTreeWidgetItem()
+                item.setText(0, str(v["user_1_id"]))
+                item.setText(1, v["user_1_name"])
+                item.setText(2, str(v["user_2_id"]))
+                item.setText(3, v["user_2_name"])
+                self.addTopLevelItem(item)
+
+        elif mode == "outside":
+            for v in value:
+                item = QTreeWidgetItem()
+                item.setText(0, str(v["user_id"]))
+                item.setText(1, v["name"])
+                self.addTopLevelItem(item)
+
+                start_date = QDateEdit()
+                start_date.setDisplayFormat('yyyy/MM/dd')
+                start_date.setDate(QDate.fromString(v["exp_start_datetime"].split(' ')[0], 'yyyy/MM/dd'))
+
+                self.setItemWidget(item, 2, start_date)
+
+                end_date = QDateEdit()
+                end_date.setDisplayFormat('yyyy/MM/dd')
+                end_date.setDate(QDate.fromString(v["exp_end_datetime"].split(' ')[0], 'yyyy/MM/dd'))
+                self.setItemWidget(item, 3, end_date)
+
+        elif mode == "exception":
+            for v in value:
+                item = QTreeWidgetItem()
+                item.setText(0, str(v["user_id"]))
+                item.setText(1, v["name"])
+                self.addTopLevelItem(item)
+
+                _start_datetime = v["exp_start_datetime"].split()
+                _end_datetime = v["exp_end_datetime"].split()
+                date = QDateEdit()
+                date.setDate(QDate.fromString(_start_datetime[0], 'yyyy/MM/dd'))
+                self.setItemWidget(item, 2, date)
+
+                start_time = QTimeEdit()
+                start_time.setTime(QTime.fromString(_start_datetime[1], 'hh:mm'))
+                self.setItemWidget(item, 3, start_time)
+
+                end_time = QTimeEdit()
+                end_time.setTime(QTime.fromString(_end_datetime[1], 'hh:mm'))
+                self.setItemWidget(item, 4, end_time)
 
     def setDropMode(self):
         self.setDragDropMode(QAbstractItemView.DropOnly)
@@ -731,37 +876,46 @@ class TreeWidget(QTreeWidget):
         idx = self.indexAt(event.pos())
         row, col = idx.row(), idx.column()
 
-        new_name = event.source().selectedItems()[0].text()
-        self.addTreeWidgetItem(row, col, new_name)
+        selected = event.source().selectedItems()[0]
+        new_id, new_name = selected.text(0), selected.text(1)
+        self.addTreeWidgetItem(row, col, new_id, new_name)
         event.accept()
 
-    def addTreeWidgetItem(self, row, col, value):
+    def addTreeWidgetItem(self, row, col, id_value, value):
         if row == -1 or col == -1:
             item = QTreeWidgetItem()
-            item.setText(0, value)
+            item.setText(0, id_value)
+            item.setText(1, value)
             self.addTopLevelItem(item)
-        elif col == 1:
+        elif col == 3:
             item = self.topLevelItem(row)
             if item:
-                item.setText(col, value)
+                item.setText(2, id_value)
+                item.setText(3, value)
 
     def setTreeWidgetHeader(self, labels):
         self.setHeaderLabels(labels)
-
         self.header().setSectionResizeMode(QHeaderView.Stretch)
-        if len(labels) == 2:
-            self.header().resizeSection(0, 50)
+
+        self.setColumnHidden(0, True)
+
+        if self.mode == "special_relation":
+            self.setColumnHidden(2, True)
             self.header().resizeSection(1, 50)
-        elif len(labels) == 3:
-            self.header().resizeSection(0, 20)
-            self.header().resizeSection(1, 40)
+            self.header().resizeSection(3, 50)
+
+        elif self.mode == "outside":
+            self.header().resizeSection(1, 20)
             self.header().resizeSection(2, 40)
-        elif len(labels) == 4:
-            self.header().resizeSection(0, 20)
-            self.header().resizeSection(1, 40)
-            self.header().resizeSection(2, 20)
+            self.header().resizeSection(3, 40)
+        elif self.mode == "exception":
+            self.header().resizeSection(1, 20)
+            self.header().resizeSection(2, 40)
             self.header().resizeSection(3, 20)
+            self.header().resizeSection(4, 20)
 
     @classmethod
-    def tree_widget(cls):
-        return cls()
+    def tree_widget(cls, mode, value):
+        widget = cls()
+        widget(mode, value)
+        return widget

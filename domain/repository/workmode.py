@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Union, Dict
 
 from PyQt5.QtSql import QSqlQuery
@@ -19,12 +20,25 @@ class WorkModeInMemoryRepository(WorkModeRepository):
         }
         return record, value_dict
 
+    @staticmethod
+    def workmode_query_record(_query: QSqlQuery):
+        record = _query.record()
+        value_dict = {
+            "user_id": record.indexOf("user_id"),
+            "name": record.indexOf("name"),
+            "exp_start_datetime": record.indexOf("exp_start_datetime"),
+            "exp_end_datetime": record.indexOf("exp_end_datetime")
+        }
+        return record, value_dict
+
     def create_work_mode_table(self, term_count: int):
         self.query.exec_(
             """
             CREATE TABLE if NOT EXISTS workmode (
                 workmode_id INTEGER primary key autoincrement,
                 user_id INTEGER,
+                exp_start_datetime DATETIME DEFAULT NULL,
+                exp_end_datetime DATETIME DEFAULT NULL,
                 foreign key (user_id) REFERENCES user(id)
             )
             """
@@ -98,3 +112,37 @@ class WorkModeInMemoryRepository(WorkModeRepository):
             item[f"holiday_{i}"] = self.query.value(record.indexOf(f"holiday_{i}"))
 
         return item
+
+    def update_exp_datetime(self, user_id: int, start: datetime, end: datetime):
+        self.query.prepare(
+            f"""
+            UPDATE workmode 
+            SET (exp_start_datetime, exp_end_datetime) = (:exp_start_datetime, :exp_end_datetime) 
+            WHERE user_id='{user_id}';
+            """
+        )
+        self.query.bindValue(":exp_start_datetime", start)
+        self.query.bindValue(":exp_end_datetime", end)
+
+        self.query.exec_()
+
+    def get_exp_datetime_exists_users(self) -> Union[List[Dict], None]:
+        self.query.exec_(
+            """
+            SELECT user_id, name, exp_start_datetime, exp_end_datetime FROM workmode w 
+            INNER JOIN user u on w.user_id = u.id 
+            WHERE exp_start_datetime NOT NULL AND exp_end_datetime NOT NULL;
+            """
+        )
+        record, exp_query_dict = self.workmode_query_record(_query=self.query)
+
+        result = []
+        while self.query.next():
+            item = {
+                "user_id": self.query.value(exp_query_dict["user_id"]),
+                "name": self.query.value(exp_query_dict["name"]),
+                "exp_start_datetime": self.query.value(exp_query_dict["exp_start_datetime"]),
+                "exp_end_datetime": self.query.value(exp_query_dict["exp_end_datetime"])
+            }
+            result.append(item)
+        return result
