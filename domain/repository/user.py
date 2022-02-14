@@ -1,5 +1,6 @@
 from typing import List, Tuple, Union, Dict
 
+from PyQt5.QtSql import QSqlQuery
 from domain.interface.user import UserRepository, UserData
 
 
@@ -14,6 +15,19 @@ class UserInMemoryRepository(UserRepository):
             "holiday_work_count": self.query.value(5)
         }
         return UserData(data)
+
+    @staticmethod
+    def exp_relation_record_from_query(_query: QSqlQuery):
+        record = _query.record()
+        data = {
+            "exp_relation_id": record.indexOf("exp_relation_id"),
+            "user_1_id": record.indexOf("user_1_id"),
+            "user_1_name": record.indexOf("user_1_name"),
+            "user_2_id": record.indexOf("user_2_id"),
+            "user_2_name": record.indexOf("user_2_name")
+        }
+
+        return record, data
 
     def create_default_user_table(self):
         self.query.exec_(
@@ -203,3 +217,50 @@ class UserInMemoryRepository(UserRepository):
             result.append(self.print_user_info_from_query())
         return result
 
+    def create_exp_relation_table(self):
+        self.query.exec_(
+            """
+            CREATE TABLE if NOT EXISTS exp_relation (
+                exp_relation_id INTEGER primary key autoincrement,
+                user_1_id INTEGER,
+                user_1_name VARCHAR (30) NOT NULL,
+                user_2_id INTEGER,
+                user_2_name VARCHAR (30) NOT NULL,
+                foreign key (user_1_id, user_2_id) REFERENCES user(id, id) ON DELETE CASCADE
+            )
+            """
+        )
+
+    def get_all_exp_relation(self) -> Union[List[Dict], None]:
+        self.query.exec_("""SELECT * FROM exp_relation;""")
+
+        record, exp_query_dict = self.exp_relation_record_from_query(_query=self.query)
+        result = []
+        while self.query.next():
+            item = {
+                "exp_relation_id": self.query.value(exp_query_dict["exp_relation_id"]),
+                "user_1_id": self.query.value(exp_query_dict["user_1_id"]),
+                "user_1_name": self.query.value(exp_query_dict["user_1_name"]),
+                "user_2_id": self.query.value(exp_query_dict["user_2_id"]),
+                "user_2_name": self.query.value(exp_query_dict["user_2_name"])
+            }
+            result.append(item)
+
+        return result
+
+    def insert_exp_relation(self, user_1_id: int, user_1_name: str, user_2_id: int, user_2_name: str):
+        self.query.prepare(
+            """
+            INSERT INTO exp_relation (user_1_id, user_1_name, user_2_id, user_2_name)
+            VALUES (:user_1_id, :user_1_name, :user_2_id, :user_2_name);
+            """
+        )
+
+        self.query.bindValue(":user_1_id", user_1_id)
+        self.query.bindValue(":user_2_id", user_2_id)
+        self.query.bindValue(":user_1_name", user_1_name)
+        self.query.bindValue(":user_2_name", user_2_name)
+        self.query.exec_()
+
+    def delete_exp_relation(self, user_1_id: int, user_2_id: int):
+        self.query.exec_(f"""DELETE FROM exp_relation WHERE user_1_id='{user_1_id}' AND user_2_id='{user_2_id}'""")

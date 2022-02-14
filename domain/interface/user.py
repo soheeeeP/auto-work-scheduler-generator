@@ -89,3 +89,19 @@ class UserRepository(metaclass=ABCMeta):
     @abstractmethod
     def get_work_mode_users(self):
         pass
+
+    @abstractmethod
+    def create_exp_relation_table(self):
+        pass
+
+    @abstractmethod
+    def get_all_exp_relation(self) -> Union[List[Dict], None]:
+        pass
+
+    @abstractmethod
+    def insert_exp_relation(self, user_1_id: int, user_1_name: str, user_2_id: int, user_2_name: str):
+        pass
+
+    @abstractmethod
+    def delete_exp_relation(self, user_1_id: int, user_2_id: int):
+        pass
