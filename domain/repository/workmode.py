@@ -20,6 +20,17 @@ class WorkModeInMemoryRepository(WorkModeRepository):
         }
         return record, value_dict
 
+    @staticmethod
+    def workmode_query_record(_query: QSqlQuery):
+        record = _query.record()
+        value_dict = {
+            "user_id": record.indexOf("user_id"),
+            "name": record.indexOf("name"),
+            "exp_start_datetime": record.indexOf("exp_start_datetime"),
+            "exp_end_datetime": record.indexOf("exp_end_datetime")
+        }
+        return record, value_dict
+
     def create_work_mode_table(self, term_count: int):
         self.query.exec_(
             """
@@ -114,3 +125,24 @@ class WorkModeInMemoryRepository(WorkModeRepository):
         self.query.bindValue(":exp_end_datetime", end)
 
         self.query.exec_()
+
+    def get_exp_datetime_exists_users(self) -> Union[List[Dict], None]:
+        self.query.exec_(
+            """
+            SELECT user_id, name, exp_start_datetime, exp_end_datetime FROM workmode w 
+            INNER JOIN user u on w.user_id = u.id 
+            WHERE exp_start_datetime NOT NULL AND exp_end_datetime NOT NULL;
+            """
+        )
+        record, exp_query_dict = self.workmode_query_record(_query=self.query)
+
+        result = []
+        while self.query.next():
+            item = {
+                "user_id": self.query.value(exp_query_dict["user_id"]),
+                "name": self.query.value(exp_query_dict["name"]),
+                "exp_start_datetime": self.query.value(exp_query_dict["exp_start_datetime"]),
+                "exp_end_datetime": self.query.value(exp_query_dict["exp_end_datetime"])
+            }
+            result.append(item)
+        return result
