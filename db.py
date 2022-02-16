@@ -110,6 +110,8 @@ class DataBase(object):
         self.work_mode_repository.create_work_mode_table(term_count=term_count)
         self.schedule_repository.create_schedule_table()
 
+        self.query.exec("""PRAGMA foreign_keys = ON;""")
+
 
 database = DataBase(db_name='test.db')
 database.connect_in_memory_repositories(

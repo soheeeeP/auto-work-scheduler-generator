@@ -87,10 +87,6 @@ class UserRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_work_mode_users(self):
-        pass
-
-    @abstractmethod
     def create_exp_relation_table(self):
         pass
 

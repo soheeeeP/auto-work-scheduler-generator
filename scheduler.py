@@ -58,7 +58,7 @@ class WorkSchedulerGenerator:
         max_work_count = self.db.user_repository.get_max_work_count()[day]
         key = "weekday" if day == "weekday" else "holiday"
 
-        users = self.db.user_repository.get_work_mode_users()
+        users = self.db.work_mode_repository.get_work_mode_users()
 
         users_work_count = {}
         for u in users:

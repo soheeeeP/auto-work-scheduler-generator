@@ -7,7 +7,7 @@ from domain.interface.workmode import WorkModeRepository, WorkData
 
 class WorkModeInMemoryRepository(WorkModeRepository):
     @staticmethod
-    def query_record(_query: QSqlQuery):
+    def user_query_record(_query: QSqlQuery):
         record = _query.record()
         value_dict = {
             "id": record.indexOf("id"),
@@ -15,8 +15,7 @@ class WorkModeInMemoryRepository(WorkModeRepository):
             "name": record.indexOf("name"),
             "status": record.indexOf("status"),
             "weekday_work_count": record.indexOf("weekday_work_count"),
-            "holiday_work_count": record.indexOf("holiday_work_count"),
-            "work_mode": record.indexOf("work_mode")
+            "holiday_work_count": record.indexOf("holiday_work_count")
         }
         return record, value_dict
 
@@ -27,9 +26,25 @@ class WorkModeInMemoryRepository(WorkModeRepository):
             "user_id": record.indexOf("user_id"),
             "name": record.indexOf("name"),
             "exp_start_datetime": record.indexOf("exp_start_datetime"),
-            "exp_end_datetime": record.indexOf("exp_end_datetime")
+            "exp_end_datetime": record.indexOf("exp_end_datetime"),
+            "work_mode": record.indexOf("work_mode")
         }
         return record, value_dict
+
+    def print_user_work_info_from_query(self):
+        record = self.query.record()
+        user_id = self.query.value(record.indexOf("id"))
+        data = {
+            "rank": self.query.value(record.indexOf("rank")),
+            "name": self.query.value(record.indexOf("name")),
+            "status": self.query.value(record.indexOf("status")),
+            "weekday_work_count": self.query.value(record.indexOf("weekday_work_count")),
+            "holiday_work_count": self.query.value(record.indexOf("holiday_work_count")),
+            "work_mode": self.query.value(record.indexOf("work_mode")),
+            "exp_start_datetime": self.query.value(record.indexOf("exp_start_datetime")),
+            "exp_end_datetime": self.query.value(record.indexOf("exp_end_datetime")),
+        }
+        return user_id, data
 
     def create_work_mode_table(self, term_count: int):
         self.query.exec_(
@@ -39,7 +54,8 @@ class WorkModeInMemoryRepository(WorkModeRepository):
                 user_id INTEGER,
                 exp_start_datetime DATETIME DEFAULT NULL,
                 exp_end_datetime DATETIME DEFAULT NULL,
-                foreign key (user_id) REFERENCES user(id)
+                work_mode VARCHAR (30) DEFAULT 'on' CHECK ( work_mode IN ('on', 'off')),
+                foreign key (user_id) REFERENCES user(id) ON DELETE CASCADE
             )
             """
         )
@@ -75,7 +91,7 @@ class WorkModeInMemoryRepository(WorkModeRepository):
 
     def get_all_users_work_mode_columns(self, term_count: int) -> Union[List[Dict], None]:
         self.query.exec_("""SELECT * FROM user u INNER JOIN workmode w on u.id = w.user_id;""")
-        record, query_dict = self.query_record(_query=self.query)
+        record, query_dict = self.user_query_record(_query=self.query)
 
         result = []
         while self.query.next():
@@ -85,10 +101,10 @@ class WorkModeInMemoryRepository(WorkModeRepository):
                 "name": self.query.value(query_dict["name"]),
                 "status": self.query.value(query_dict["status"]),
                 "weekday_work_count": self.query.value(query_dict["weekday_work_count"]),
-                "holiday_work_count": self.query.value(query_dict["holiday_work_count"]),
-                "work_mode": self.query.value(query_dict["work_mode"])
+                "holiday_work_count": self.query.value(query_dict["holiday_work_count"])
             }
             for i in range(1, term_count + 1):
+                item["work_mode"] = self.query.value(record.indexOf("work_mode"))
                 item[f"weekday_{i}"] = self.query.value(record.indexOf(f"weekday_{i}"))
                 item[f"holiday_{i}"] = self.query.value(record.indexOf(f"holiday_{i}"))
             result.append(item)
@@ -99,7 +115,7 @@ class WorkModeInMemoryRepository(WorkModeRepository):
         self.query.exec_(f"""SELECT * FROM user u INNER JOIN workmode w on u.id = w.user_id and u.id = '{user_id}';""")
         self.query.next()
 
-        record, query_dict = self.query_record(_query=self.query)
+        record, query_dict = self.user_query_record(_query=self.query)
 
         item = {
             "rank": self.query.value(query_dict["rank"]),
@@ -108,6 +124,7 @@ class WorkModeInMemoryRepository(WorkModeRepository):
             "work_count": self.query.value(query_dict["work_count"])
         }
         for i in range(1, term_count + 1):
+            item["work_mode"] = self.query.value(record.indexOf("work_mode"))
             item[f"weekday_{i}"] = self.query.value(record.indexOf(f"weekday_{i}"))
             item[f"holiday_{i}"] = self.query.value(record.indexOf(f"holiday_{i}"))
 
@@ -145,4 +162,18 @@ class WorkModeInMemoryRepository(WorkModeRepository):
                 "exp_end_datetime": self.query.value(exp_query_dict["exp_end_datetime"])
             }
             result.append(item)
+        return result
+
+    def get_work_mode_users(self) -> Union[Dict, None]:
+        self.query.exec_(
+            """
+            SELECT * FROM workmode w INNER JOIN user u on w.user_id = u.id WHERE work_mode = 'on';
+            """
+        )
+
+        result = {}
+        while self.query.next():
+            user_id, user_data = self.print_user_work_info_from_query()
+            result[user_id] = user_data
+
         return result

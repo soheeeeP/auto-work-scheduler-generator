@@ -197,7 +197,6 @@ class FileWidget(QWidget):
             "status": "사수/부사수",
             "weekday_work_count": "평일 카운트",
             "holiday_work_count": "주말 카운트",
-            "work_mode": "근무자"
         }
         self.label_for_db = {v: k for k, v in self.label_for_display.items()}
 
@@ -281,6 +280,7 @@ class FileWidget(QWidget):
         print(col)
 
         headers = list(self.label_for_db.keys())
+        headers.append("근무자")
         for i in range(1, self.term_count + 1):
             headers.append(f"평일_{i}")
             headers.append(f"휴일_{i}")
@@ -375,16 +375,20 @@ class FileWidget(QWidget):
         for i in range(self.row):
             user_data, work_mode_option = {}, {}
             for j in range(self.col):
-                val = self.table.horizontalHeaderItem(j).text()
-                if val in self.label_for_display.values():
-                    user_data[self.label_for_db[val]] = self.table.item(i, j).text()
+                header = self.table.horizontalHeaderItem(j).text()
+                value = self.table.item(i, j).text()
+                if header in self.label_for_display.values():
+                    user_data[self.label_for_db[header]] = value
                 else:
-                    if val == "id":
-                        _val = val
+                    if header[:2] in day_keys:
+                        day, num = header.split("_")
+                        _header, value = day_keys[day] + "_" + num, int(value)
+                    elif header == "근무자":
+                        _header = "work_mode"
                     else:
-                        day, num = val.split("_")
-                        _val = day_keys[day] + "_" + num
-                    work_mode_option[_val] = int(self.table.item(i, j).text())
+                        _header = header
+                    work_mode_option[_header] = value
+
             user_list.append({
                 "data": user_data,
                 "work_mode_option": work_mode_option
@@ -417,6 +421,7 @@ class FileWidget(QWidget):
 
             default_work_mode = {}
             for i in range(self.term_count):
+                default_work_mode['work_mode'] = 'on'
                 default_work_mode[f'weekday_{i + 1}'] = 1
                 default_work_mode[f'holiday_{i + 1}'] = 1
 
@@ -456,7 +461,7 @@ class FileWidget(QWidget):
         if message == QMessageBox.Yes:
             idx = self.table.selectedRanges()[0]
             s, e = idx.topRow(), idx.bottomRow()
-
+            # BUGFIX: user 삭제시, work_mode도 삭제 (pragma foreign key)
             for i in range(s, e + 1):
                 self.db.user_repository.delete_user(user_id=self.data[i]['id'])
 
@@ -727,7 +732,7 @@ class OptionWidget(QWidget):
         if _data is None:
             print('저장할 데이터가 없습니다')
             return
-
+        # TODO: exp_datetime 수정시, workmode 수정
         if self.mode == "outside":
             for d in _data:
                 if d["출발일"] > d["복귀일"]:

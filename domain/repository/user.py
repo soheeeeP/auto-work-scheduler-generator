@@ -38,8 +38,7 @@ class UserInMemoryRepository(UserRepository):
                 name VARCHAR (30) NOT NULL,
                 status VARCHAR (30) NOT NULL DEFAULT 'Default',
                 weekday_work_count INTEGER DEFAULT 0 CHECK ( weekday_work_count >= 0 ),
-                holiday_work_count INTEGER DEFAULT 0 CHECK ( holiday_work_count >= 0 ),
-                work_mode VARCHAR (30) DEFAULT 'on' CHECK ( work_mode IN ('on', 'off'))
+                holiday_work_count INTEGER DEFAULT 0 CHECK ( holiday_work_count >= 0 )
             )
             """
         )
@@ -151,8 +150,8 @@ class UserInMemoryRepository(UserRepository):
         self.query.prepare(
             f"""
             UPDATE user
-            SET (rank, name, status, weekday_work_count, holiday_work_count, work_mode)
-            = (:rank, :name, :status, :weekday_work_count, :holiday_work_count, :work_mode)
+            SET (rank, name, status, weekday_work_count, holiday_work_count)
+            = (:rank, :name, :status, :weekday_work_count, :holiday_work_count)
             WHERE id='{user_id}';
             """
         )
@@ -161,7 +160,6 @@ class UserInMemoryRepository(UserRepository):
         self.query.bindValue(":status", user_data['status'])
         self.query.bindValue(":weekday_work_count", int(user_data['weekday_work_count']))
         self.query.bindValue(":holiday_work_count", int(user_data['holiday_work_count']))
-        self.query.bindValue(":work_mode", user_data['work_mode'])
 
         self.query.exec_()
 
@@ -201,21 +199,6 @@ class UserInMemoryRepository(UserRepository):
             "holiday": self.query.value(1)
         }
         return work_count
-
-    def get_work_mode_users(self):
-        self.query.exec_(
-            """
-            SELECT * FROM user WHERE work_mode = 'on';
-            """
-        )
-
-        if not self.query.first():
-            raise NameError(f'error while selecting users')
-
-        result = []
-        while self.query.next():
-            result.append(self.print_user_info_from_query())
-        return result
 
     def create_exp_relation_table(self):
         self.query.exec_(
