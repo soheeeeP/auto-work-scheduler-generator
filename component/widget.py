@@ -766,9 +766,9 @@ class OptionWidget(QWidget):
 
         for d in _data:
             self.db.user_repository.insert_exp_relation(
-                user_1_id=d["id1"],
+                user_1_id=int(d["id1"]),
                 user_1_name=d["사용자1"],
-                user_2_id=d["id2"],
+                user_2_id=int(d["id2"]),
                 user_2_name=d["사용자2"]
             )
 
@@ -824,6 +824,7 @@ class DropTreeWidget(QTreeWidget):
         self.mode = mode
 
         if mode == "special_relation":
+            # TODO: 새로 입력된 data와 기존에 table에 존재하던 data 구분하기
             for v in value:
                 item = QTreeWidgetItem()
                 item.setText(0, str(v["user_1_id"]))

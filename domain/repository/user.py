@@ -209,7 +209,8 @@ class UserInMemoryRepository(UserRepository):
                 user_1_name VARCHAR (30) NOT NULL,
                 user_2_id INTEGER,
                 user_2_name VARCHAR (30) NOT NULL,
-                foreign key (user_1_id, user_2_id) REFERENCES user(id, id) ON DELETE CASCADE
+                foreign key (user_1_id) REFERENCES user(id) ON DELETE CASCADE,
+                foreign key (user_2_id) REFERENCES user(id) ON DELETE CASCADE
             )
             """
         )
@@ -232,18 +233,15 @@ class UserInMemoryRepository(UserRepository):
         return result
 
     def insert_exp_relation(self, user_1_id: int, user_1_name: str, user_2_id: int, user_2_name: str):
-        self.query.prepare(
-            """
-            INSERT INTO exp_relation (user_1_id, user_1_name, user_2_id, user_2_name)
-            VALUES (:user_1_id, :user_1_name, :user_2_id, :user_2_name);
-            """
-        )
+        self.query.exec_(f"""SELECT * FROM exp_relation WHERE user_1_id='{user_1_id}' AND user_2_id='{user_2_id}';""")
+        if self.query.first():
+            return '이미 저장된 관계입니다.'
 
-        self.query.bindValue(":user_1_id", user_1_id)
-        self.query.bindValue(":user_2_id", user_2_id)
-        self.query.bindValue(":user_1_name", user_1_name)
-        self.query.bindValue(":user_2_name", user_2_name)
-        self.query.exec_()
+        self.query.exec_(
+            f"""
+            INSERT INTO exp_relation (user_1_id, user_1_name, user_2_id, user_2_name)
+            VALUES ('{user_1_id}', '{user_1_name}', '{user_2_id}', '{user_2_name}');"""
+        )
 
     def delete_exp_relation(self, user_1_id: int, user_2_id: int):
         self.query.exec_(f"""DELETE FROM exp_relation WHERE user_1_id='{user_1_id}' AND user_2_id='{user_2_id}'""")
