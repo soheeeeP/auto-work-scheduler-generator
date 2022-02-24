@@ -38,8 +38,7 @@ class UserInMemoryRepository(UserRepository):
                 name VARCHAR (30) NOT NULL,
                 status VARCHAR (30) NOT NULL DEFAULT 'Default',
                 weekday_work_count INTEGER DEFAULT 0 CHECK ( weekday_work_count >= 0 ),
-                holiday_work_count INTEGER DEFAULT 0 CHECK ( holiday_work_count >= 0 ),
-                work_mode VARCHAR (30) DEFAULT 'on' CHECK ( work_mode IN ('on', 'off'))
+                holiday_work_count INTEGER DEFAULT 0 CHECK ( holiday_work_count >= 0 )
             )
             """
         )
@@ -151,8 +150,8 @@ class UserInMemoryRepository(UserRepository):
         self.query.prepare(
             f"""
             UPDATE user
-            SET (rank, name, status, weekday_work_count, holiday_work_count, work_mode)
-            = (:rank, :name, :status, :weekday_work_count, :holiday_work_count, :work_mode)
+            SET (rank, name, status, weekday_work_count, holiday_work_count)
+            = (:rank, :name, :status, :weekday_work_count, :holiday_work_count)
             WHERE id='{user_id}';
             """
         )
@@ -161,7 +160,6 @@ class UserInMemoryRepository(UserRepository):
         self.query.bindValue(":status", user_data['status'])
         self.query.bindValue(":weekday_work_count", int(user_data['weekday_work_count']))
         self.query.bindValue(":holiday_work_count", int(user_data['holiday_work_count']))
-        self.query.bindValue(":work_mode", user_data['work_mode'])
 
         self.query.exec_()
 
@@ -202,21 +200,6 @@ class UserInMemoryRepository(UserRepository):
         }
         return work_count
 
-    def get_work_mode_users(self):
-        self.query.exec_(
-            """
-            SELECT * FROM user WHERE work_mode = 'on';
-            """
-        )
-
-        if not self.query.first():
-            raise NameError(f'error while selecting users')
-
-        result = []
-        while self.query.next():
-            result.append(self.print_user_info_from_query())
-        return result
-
     def create_exp_relation_table(self):
         self.query.exec_(
             """
@@ -226,7 +209,8 @@ class UserInMemoryRepository(UserRepository):
                 user_1_name VARCHAR (30) NOT NULL,
                 user_2_id INTEGER,
                 user_2_name VARCHAR (30) NOT NULL,
-                foreign key (user_1_id, user_2_id) REFERENCES user(id, id) ON DELETE CASCADE
+                foreign key (user_1_id) REFERENCES user(id) ON DELETE CASCADE,
+                foreign key (user_2_id) REFERENCES user(id) ON DELETE CASCADE
             )
             """
         )
@@ -249,18 +233,15 @@ class UserInMemoryRepository(UserRepository):
         return result
 
     def insert_exp_relation(self, user_1_id: int, user_1_name: str, user_2_id: int, user_2_name: str):
-        self.query.prepare(
-            """
-            INSERT INTO exp_relation (user_1_id, user_1_name, user_2_id, user_2_name)
-            VALUES (:user_1_id, :user_1_name, :user_2_id, :user_2_name);
-            """
-        )
+        self.query.exec_(f"""SELECT * FROM exp_relation WHERE user_1_id='{user_1_id}' AND user_2_id='{user_2_id}';""")
+        if self.query.first():
+            return '이미 저장된 관계입니다.'
 
-        self.query.bindValue(":user_1_id", user_1_id)
-        self.query.bindValue(":user_2_id", user_2_id)
-        self.query.bindValue(":user_1_name", user_1_name)
-        self.query.bindValue(":user_2_name", user_2_name)
-        self.query.exec_()
+        self.query.exec_(
+            f"""
+            INSERT INTO exp_relation (user_1_id, user_1_name, user_2_id, user_2_name)
+            VALUES ('{user_1_id}', '{user_1_name}', '{user_2_id}', '{user_2_name}');"""
+        )
 
     def delete_exp_relation(self, user_1_id: int, user_2_id: int):
         self.query.exec_(f"""DELETE FROM exp_relation WHERE user_1_id='{user_1_id}' AND user_2_id='{user_2_id}'""")

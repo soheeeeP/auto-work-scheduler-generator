@@ -2,10 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QWidget
 
 from component.widget import RadioButtonWidget, FileWidget, OptionWidget
 
-
-class MenuWindow(QMainWindow):
-
-    window_title_dict = {
+window_title_dict = {
         "config": None,
         "db": {
             "register": "파일 등록하기",
@@ -19,6 +16,8 @@ class MenuWindow(QMainWindow):
         }
     }
 
+
+class MenuWindow(QMainWindow):
     def __init__(self, parent: QMainWindow, width: int, height: int):
         super(MenuWindow, self).__init__(parent)
 
@@ -28,12 +27,13 @@ class MenuWindow(QMainWindow):
         self.setupLayout()
 
     def __call__(self, typeof_widget, mode):
-        self.setWindowTitle(self.window_title_dict[typeof_widget][mode])
         if typeof_widget == "config":
             widget = RadioButtonWidget.init_widget(mode=mode)
         elif typeof_widget == "db":
+            self.setWindowTitle(window_title_dict[typeof_widget][mode])
             widget = FileWidget.init_db_widget(mode=mode)
         elif typeof_widget == "option":
+            self.setWindowTitle(window_title_dict[typeof_widget][mode])
             widget = OptionWidget.init_option_widget(mode=mode)
         else:
             return

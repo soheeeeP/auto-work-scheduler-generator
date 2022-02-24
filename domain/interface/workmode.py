@@ -18,6 +18,10 @@ class WorkModeRepository(metaclass=ABCMeta):
         self._query = value
 
     @abstractmethod
+    def print_user_work_info_from_query(self):
+        pass
+
+    @abstractmethod
     def create_work_mode_table(self, term_count: int):
         pass
 
@@ -51,4 +55,8 @@ class WorkModeRepository(metaclass=ABCMeta):
 
     @abstractmethod
     def get_exp_datetime_exists_users(self)-> Union[List[Dict], None]:
+        pass
+
+    @abstractmethod
+    def get_work_mode_users(self) -> Union[Dict, None]:
         pass
