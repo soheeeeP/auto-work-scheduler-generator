@@ -199,14 +199,6 @@ class WindowApplication(QMainWindow):
         option_menu.addAction(specialRelationMenu)
         specialRelationMenu.triggered.connect(self.specialRelationOption)
 
-        save_menu = menu_bar.addMenu("저장")
-
-        saveWorkRoutineCellMenu = QAction("근무표 저장", self)
-        saveWorkCountCellMenu = QAction("근무카운트 저장", self)
-
-        save_menu.addAction(saveWorkRoutineCellMenu)
-        save_menu.addAction(saveWorkCountCellMenu)
-
     def setupMainWindow(self):
         center = QDesktopWidget().availableGeometry().center()
         self.setGeometry(center.x() - int(self.width / 2), center.y() - int(self.height / 2), self.width, self.height)
