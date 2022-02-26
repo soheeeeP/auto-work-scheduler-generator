@@ -1,7 +1,7 @@
 import math
 from datetime import datetime
 from itertools import combinations, product
-from typing import Dict, List, Tuple, Set
+from typing import Dict, List, Tuple, Set, Union
 
 from db import database
 
@@ -45,11 +45,14 @@ class AdjustedWorkSchedulerGenerator:
                 self.all_exp_relations_id_list[user_1_id].add(user_2_id)
 
     def __call__(self, day_key):
-        q, pre_queue = self.workers_queue(day_key)
-        setattr(self, 'queue', q)
-
         days_cnt = self.days_on_off.count(self.day_dict[day_key])
-        setattr(self, 'table', [[set() for j in range(self.term_count)] for i in range(days_cnt)])
+        setattr(self, 'table', [[{} for j in range(self.term_count)] for i in range(days_cnt)])
+
+        flag, q, pre_queue = self.workers_queue(day_key)
+        if flag is False:
+            return False
+
+        setattr(self, 'queue', q)
 
         queue = getattr(self, 'queue')
         if self.worker_per_term == 1 or self.assistant_mode is False:
@@ -130,9 +133,13 @@ class AdjustedWorkSchedulerGenerator:
 
         return True, exp
 
-    def workers_queue(self, day_key) -> Tuple[Dict, Dict]:
+    def workers_queue(self, day_key) -> Tuple[bool, Union[Dict, None], Union[Dict, None]]:
         sum_count = 0
         max_work_count = self.db.user_repository.get_max_work_count()[day_key]
+
+        days_cnt = self.days_on_off.count(self.day_dict[day_key])
+        if days_cnt == 0:
+            return False, None, None
 
         needed_terms_in_week = self.term_count * self.days_on_off.count(self.day_dict[day_key])
 
@@ -155,6 +162,7 @@ class AdjustedWorkSchedulerGenerator:
 
             sum_count += diff
             users_queue[user_id] = {
+                "name": value["name"],
                 "status": value["status"],
                 "exp": on,
                 "exp_terms_idx_list": exp_term_data if on else None,
@@ -174,7 +182,7 @@ class AdjustedWorkSchedulerGenerator:
         pre_workers_queue = {k: v for k, v in
                              sorted(pre_workers.items(), key=lambda x: x[1]["work_count"], reverse=True)}
 
-        return workers_queue, pre_workers_queue
+        return True, workers_queue, pre_workers_queue
 
     def generate_worker_group(self, single_group, sub_group, worker_per_term) -> Set:
         sub_group, sub_ids_list = [], list(sub_group.keys())
@@ -239,13 +247,18 @@ class AdjustedWorkSchedulerGenerator:
                         continue
 
                     row, col = _idx // self.term_count, _idx % self.term_count
-                    # workers_set = set(work_table[row][col])
-                    workers_set = work_table[row][col]
+
+                    if row >= days_cnt or col >= self.term_count:
+                        idx = 0
+                        bias, bias_mode = 0, False
+                        continue
+
+                    workers_set = set(work_table[row][col].keys())
                     if len(workers_set) >= self.worker_per_term or (exp_mode and workers_set.intersection(exp_users)):
                         bias, bias_mode = bias + 1, True
                         continue
 
-                    work_table[row][col].add(worker_id)
+                    work_table[row][col][worker_id] = value['name']
                     bias, bias_mode = 0, False
                     assigned_work_cnt += 1
                     idx = _idx + term
