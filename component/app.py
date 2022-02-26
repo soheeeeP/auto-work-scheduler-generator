@@ -25,7 +25,7 @@ class WindowApplication(QMainWindow):
 
         self.calendar = today
         self.start_date = today
-        self.end_date = today.addMonths(1)
+        self.end_date = today.addDays(7)
         self.holiday_list = today
 
         self.add_button = '추가'
@@ -79,7 +79,7 @@ class WindowApplication(QMainWindow):
 
         for i in range(1, 8):
             day = value.addDays(i)
-            if day.dayOfWeek() == 5 or day.dayOfWeek() == 6:
+            if day.dayOfWeek() == 6 or day.dayOfWeek() == 7:
                 item = QListWidgetItem()
 
                 holiday = QDateEdit()
@@ -246,12 +246,13 @@ class WindowApplication(QMainWindow):
         ymd_format = 'yyyy/MM/dd'
 
         start = self.start_date.date()
-        s_m, s_d = start.month(), start.day()
-
         end = self.end_date.date()
-        e_m, e_d = end.month(), end.day()
 
-        days = [1 for i in range((e_m - s_m) * 30 + (e_d - s_d) + 1)]
+        s_m, s_d = start.month(), start.day()
+        base_date = start.toString(ymd_format)
+
+        days_cnt = start.daysTo(end)
+        days_on_off = [1 for i in range(days_cnt + 1)]
 
         for i in range(self.holiday_list.count()):
             item = self.holiday_list.item(i)
@@ -259,23 +260,42 @@ class WindowApplication(QMainWindow):
             holiday = self.holiday_list.itemWidget(item).date()
             h_m, h_d = holiday.month(), holiday.day()
 
-            days[(h_m - s_m) * 30 + (h_d - s_d)] = 0
-
-        base_date = start.toString(ymd_format)
+            days_on_off[(h_m - s_m) * 30 + (h_d - s_d)] = 0
 
         weekday = AdjustedWorkSchedulerGenerator.init_scheduler(
             base_date=base_date,
-            days_on_off=days,
+            days_on_off=days_on_off,
             day_key="weekday"
         )
-        print(weekday)
-
         holiday = AdjustedWorkSchedulerGenerator.init_scheduler(
             base_date=base_date,
-            days_on_off=days,
+            days_on_off=days_on_off,
             day_key="holiday"
         )
+
+        print(weekday)
         print(holiday)
+
+        schedule = {start.addDays(i).toString(ymd_format): [] for i in range(1, days_cnt + 1)}
+        w_loc, h_loc = 0, 0
+        for i, val in enumerate(days_on_off):
+            cur_date = start.addDays(i).toString(ymd_format)
+            if val == 1:
+                schedule[cur_date] = weekday[w_loc]
+                w_loc += 1
+            else:
+                schedule[cur_date] = holiday[h_loc]
+                h_loc += 1
+
+        _schedule = {k: v for k, v in sorted(schedule.items(), key=lambda x: x[0])}
+        _workers = {}
+        term_count = len(list(_schedule.values())[0])
+        for users in list(_schedule.values()):
+            for i in range(term_count):
+                _workers.update(users[i])
+
+        print(_schedule)
+        print(_workers)
 
     def workerPerTerm(self):
         MenuWindow.menu_window(self, 'config', 'worker', 240, 180).show()
