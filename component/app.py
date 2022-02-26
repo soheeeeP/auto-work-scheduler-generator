@@ -1,6 +1,8 @@
-from PyQt5.QtCore import QDate
-from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction, QPushButton, QDateEdit, QCalendarWidget, QVBoxLayout, \
-    QHBoxLayout, QGridLayout, QWidget, QLabel, QListWidget, QListWidgetItem, QGroupBox
+from PyQt5.QtCore import QDate, Qt
+from PyQt5.QtGui import QFont, QColor
+from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction, QPushButton, QDateEdit, QCalendarWidget, \
+    QVBoxLayout, QHBoxLayout, QGridLayout, QWidget, QLabel, QListWidget, QListWidgetItem, QGroupBox,\
+    QTableWidget, QTableWidgetItem
 
 from component.window import MenuWindow
 from component.dialog import LogInDialog
@@ -30,11 +32,20 @@ class WindowApplication(QMainWindow):
 
         self.add_button = '추가'
         self.del_button = '삭제'
-        self.scheduler = '근무표 생성하기'
+        self.scheduler_button = '근무표 생성'
+        self.save_button = '근무표 저장'
+        self.adjust_button = '근무표 조정'
 
         self.start_label = QLabel('시작일')
         self.end_label = QLabel('종료일')
         self.holiday_label = QLabel('휴일')
+
+        self._time_labels = None
+        self.schedule = None
+        self.workers = None
+        self.schedule_table = None
+
+        self.scheduler_box = QVBoxLayout()
 
         self.setupMainWindow()
 
@@ -77,7 +88,7 @@ class WindowApplication(QMainWindow):
     def holiday_list(self, value):
         self._holiday_list = QListWidget()
 
-        for i in range(1, 8):
+        for i in range(0, 7):
             day = value.addDays(i)
             if day.dayOfWeek() == 6 or day.dayOfWeek() == 7:
                 item = QListWidgetItem()
@@ -107,13 +118,41 @@ class WindowApplication(QMainWindow):
         self._del_button.clicked.connect(self.delete_holiday_from_list)
 
     @property
-    def scheduler(self):
-        return self._scheduler
+    def scheduler_button(self):
+        return self._scheduler_button
 
-    @scheduler.setter
-    def scheduler(self, value):
-        self._scheduler = QPushButton(value)
-        self._scheduler.clicked.connect(self.create_schedule)
+    @scheduler_button.setter
+    def scheduler_button(self, value):
+        self._scheduler_button = QPushButton(value)
+        self._scheduler_button.clicked.connect(self.create_schedule)
+
+    @property
+    def save_button(self):
+        return self._save_button
+
+    @save_button.setter
+    def save_button(self, value):
+        self._save_button = QPushButton(value)
+
+    @property
+    def adjust_button(self):
+        return self._adjust_button
+
+    @adjust_button.setter
+    def adjust_button(self, value):
+        self._adjust_button = QPushButton(value)
+
+    @property
+    def time_labels(self):
+        return self._time_labels
+
+    @time_labels.setter
+    def time_labels(self, term_count):
+        self._time_labels = []
+
+        for i in range(term_count):
+            s_hour, h_hour = (24 // term_count) * i, (24 // term_count) * (i + 1)
+            self._time_labels.append('{0:0>2}:00~{1:0>2}:00'.format(s_hour, h_hour))
 
     def setupMenuBar(self):
         menu_bar = self.menuBar()
@@ -195,7 +234,7 @@ class WindowApplication(QMainWindow):
         date.addWidget(self.holiday_list, 2, 2, 4, 2)
 
         button = QHBoxLayout()
-        button.addWidget(self.scheduler)
+        button.addWidget(self.scheduler_button)
 
         setting_layout = QVBoxLayout()
         setting_layout.addStretch(2)
@@ -208,9 +247,7 @@ class WindowApplication(QMainWindow):
 
         group = QGroupBox()
         group.setMinimumWidth(360)
-
-        scheduler_box = QVBoxLayout()
-        group.setLayout(scheduler_box)
+        group.setLayout(self.scheduler_box)
 
         result_layout = QVBoxLayout()
         result_layout.addWidget(group)
@@ -248,7 +285,6 @@ class WindowApplication(QMainWindow):
         start = self.start_date.date()
         end = self.end_date.date()
 
-        s_m, s_d = start.month(), start.day()
         base_date = start.toString(ymd_format)
 
         days_cnt = start.daysTo(end)
@@ -258,44 +294,82 @@ class WindowApplication(QMainWindow):
             item = self.holiday_list.item(i)
 
             holiday = self.holiday_list.itemWidget(item).date()
-            h_m, h_d = holiday.month(), holiday.day()
+            days_on_off[start.daysTo(holiday)] = 0
 
-            days_on_off[(h_m - s_m) * 30 + (h_d - s_d)] = 0
-
-        weekday = AdjustedWorkSchedulerGenerator.init_scheduler(
+        weekday, w_work_count = AdjustedWorkSchedulerGenerator.init_scheduler(
             base_date=base_date,
             days_on_off=days_on_off,
             day_key="weekday"
         )
-        holiday = AdjustedWorkSchedulerGenerator.init_scheduler(
+        holiday, h_work_count = AdjustedWorkSchedulerGenerator.init_scheduler(
             base_date=base_date,
             days_on_off=days_on_off,
             day_key="holiday"
         )
 
-        print(weekday)
-        print(holiday)
-
-        schedule = {start.addDays(i).toString(ymd_format): [] for i in range(1, days_cnt + 1)}
+        _schedule = {start.addDays(i).toString(ymd_format): [] for i in range(0, days_cnt + 1)}
         w_loc, h_loc = 0, 0
         for i, val in enumerate(days_on_off):
             cur_date = start.addDays(i).toString(ymd_format)
             if val == 1:
-                schedule[cur_date] = weekday[w_loc]
+                _schedule[cur_date] = weekday[w_loc]
                 w_loc += 1
             else:
-                schedule[cur_date] = holiday[h_loc]
+                _schedule[cur_date] = holiday[h_loc]
                 h_loc += 1
 
-        _schedule = {k: v for k, v in sorted(schedule.items(), key=lambda x: x[0])}
-        _workers = {}
-        term_count = len(list(_schedule.values())[0])
-        for users in list(_schedule.values()):
-            for i in range(term_count):
-                _workers.update(users[i])
+        self.schedule = {k: v for k, v in sorted(_schedule.items(), key=lambda x: x[0])}
+        self.workers = {user_id: 0 for user_id in set(list(w_work_count.keys()) + list(h_work_count.keys()))}
 
-        print(_schedule)
-        print(_workers)
+        for u_id, u_count in w_work_count.items():
+            self.workers[u_id] += u_count
+        for u_id, u_count in h_work_count.items():
+            self.workers[u_id] += u_count
+
+        self.set_schedule_table_layout(days_cnt)
+
+    def set_schedule_table_layout(self, days_cnt):
+        label_font = QFont()
+        label_font.setBold(True)
+
+        day_keys = list(self.schedule.keys())
+        term_count = len(list(self.schedule.values())[0])
+        workers_cnt = len(list(self.schedule.values())[0][0])
+        self.time_labels = term_count
+
+        prev_table = self.schedule_table
+        if prev_table:
+            self.scheduler_box.removeWidget(prev_table)
+            self.scheduler_box.removeWidget(self.save_button)
+            self.scheduler_box.removeWidget(self.adjust_button)
+
+        self.schedule_table = QTableWidget()
+        self.schedule_table.setColumnCount(days_cnt + 1)
+        self.schedule_table.setRowCount(term_count * (1 + workers_cnt))
+        self.schedule_table.verticalHeader().hide()
+        self.schedule_table.setHorizontalHeaderLabels(day_keys)
+
+        for i, key in enumerate(day_keys):
+            users_of_day = self.schedule[key]
+            for j in range(term_count):
+                users_of_term = list(users_of_day[j].values())
+                row_idx = j * (workers_cnt + 1)
+                self.schedule_table.setItem(row_idx, i, QTableWidgetItem(self.time_labels[j]))
+
+                self.schedule_table.item(row_idx, i).setFont(label_font)
+                self.schedule_table.item(row_idx, i).setBackground(QColor(229, 229, 229))
+                self.schedule_table.item(row_idx, i).setTextAlignment(Qt.AlignHCenter)
+                for k in range(workers_cnt):
+                    row_idx += 1
+                    self.schedule_table.setItem(row_idx, i, QTableWidgetItem(users_of_term[k]))
+                    self.schedule_table.item(row_idx, i).setTextAlignment(Qt.AlignHCenter)
+
+        self.schedule_table.resizeRowsToContents()
+        self.schedule_table.resizeColumnsToContents()
+
+        self.scheduler_box.addWidget(self.schedule_table)
+        self.scheduler_box.addWidget(self.save_button)
+        self.scheduler_box.addWidget(self.adjust_button)
 
     def workerPerTerm(self):
         MenuWindow.menu_window(self, 'config', 'worker', 240, 180).show()
