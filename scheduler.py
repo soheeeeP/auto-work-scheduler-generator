@@ -44,6 +44,11 @@ class AdjustedWorkSchedulerGenerator:
             else:
                 self.all_exp_relations_id_list[user_1_id].add(user_2_id)
 
+            if user_2_id not in self.all_exp_relations_id_list:
+                self.all_exp_relations_id_list[user_2_id] = {user_1_id}
+            else:
+                self.all_exp_relations_id_list[user_2_id].add(user_1_id)
+
     def __call__(self, day_key):
         days_cnt = self.days_on_off.count(self.day_dict[day_key])
         setattr(self, 'table', [[{} for j in range(self.term_count)] for i in range(days_cnt)])
@@ -236,17 +241,17 @@ class AdjustedWorkSchedulerGenerator:
 
                 cnt = value[label] if value[label] < avg_work_count else avg_work_count
 
-                term = needed_workers_in_week // all_workers_work_count_sum
+                term = max(2, needed_workers_in_week // all_workers_work_count_sum)
                 assigned_work_cnt, idx, bias, bias_mode = 0, 0, 0, False
                 if worker_id in self.all_exp_relations_id_list:
-                    exp_users, exp_mode = self.all_exp_relations_id_list[worker_id], True
+                    exp_users, exp_mode = set(self.all_exp_relations_id_list[worker_id]), True
                 else:
                     exp_users, exp_mode = None, False
 
                 while idx < days_cnt * self.term_count and assigned_work_cnt < cnt:
                     _idx = (idx + bias) if bias_mode else idx
                     if value['exp_terms_idx_list'] and _idx in value['exp_terms_idx_list']:
-                        _idx += 1
+                        bias, bias_mode = bias + 1, True
                         continue
 
                     row, col = _idx // self.term_count, _idx % self.term_count
@@ -258,7 +263,7 @@ class AdjustedWorkSchedulerGenerator:
 
                     workers_set = set(work_table[row][col].keys())
                     if len(workers_set) >= self.worker_per_term or (exp_mode and workers_set.intersection(exp_users)):
-                        bias, bias_mode = bias + 1, True
+                        idx += 1
                         continue
 
                     work_table[row][col][worker_id] = value['name']
