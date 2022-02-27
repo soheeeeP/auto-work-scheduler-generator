@@ -52,7 +52,7 @@ class AdjustedWorkSchedulerGenerator:
     def __call__(self, day_key):
         days_cnt = self.days_on_off.count(self.day_dict[day_key])
         setattr(self, 'table', [[{} for j in range(self.term_count)] for i in range(days_cnt)])
-        setattr(self, 'assigned_worker_id_count', {})
+        setattr(self, 'organized_schedule', {})
 
         flag, q, pre_queue = self.workers_queue(day_key)
         if flag is False:
@@ -72,12 +72,12 @@ class AdjustedWorkSchedulerGenerator:
         else:
             senior_queue, junior_queue = {}, {}
             pre_senior_queue, pre_junior_queue = {}, {}
-            for user_id, value in queue:
+            for user_id, value in queue.items():
                 if value['status'] == '사수':
                     senior_queue[user_id] = value
                 else:
                     junior_queue[user_id] = value
-            for user_id, value in pre_queue:
+            for user_id, value in pre_queue.items():
                 if value['status'] == '사수':
                     pre_senior_queue[user_id] = value
                 else:
@@ -93,7 +93,7 @@ class AdjustedWorkSchedulerGenerator:
                 day_key=day_key,
                 queue=junior_queue,
                 pre_queue=pre_junior_queue,
-                worker_per_term=self.worker_per_term - 1
+                worker_per_term=self.worker_per_term
             )
 
         return True
@@ -104,6 +104,21 @@ class AdjustedWorkSchedulerGenerator:
         for t in table:
             x += sum(len(_t) for _t in t)
         return x
+
+    @staticmethod
+    def find_table_idx_to_assign(table, term_count, worker_per_term, start_i):
+        r, c = start_i // term_count, start_i % term_count
+        for j in range(c, term_count):
+            if len(table[r][j].keys()) < worker_per_term:
+                return r * term_count + j
+
+        for i in range(r + 1, len(table)):
+            for j in range(0, term_count):
+                if len(table[i][j].keys()) < worker_per_term:
+                    return i * term_count + j
+
+        return -1
+        # return term_count * len(table)
 
     def calc_exp_users_work_term(self, day_key, start_dt, end_dt):
         ymd_format, hm_format = '%Y/%m/%d', '%H:%M'
@@ -148,6 +163,7 @@ class AdjustedWorkSchedulerGenerator:
             return False, None, None
 
         needed_terms_in_week = self.term_count * self.days_on_off.count(self.day_dict[day_key])
+        total_count = 0
 
         users_queue = {}
         for user_id, value in self.all_users.items():
@@ -163,17 +179,23 @@ class AdjustedWorkSchedulerGenerator:
                 ratio = (needed_terms_in_week - len(exp_term_data)) / needed_terms_in_week
                 diff = math.floor(diff * ratio)
 
-            if diff <= 0:
-                continue
+            if diff > 0:
+                sum_count += diff
 
-            sum_count += diff
             users_queue[user_id] = {
                 "name": value["name"],
                 "status": value["status"],
                 "exp": on,
                 "exp_terms_idx_list": exp_term_data if on else None,
-                "work_count": diff
+                "work_count": max(diff, 0)
             }
+
+            total_count += max(diff, 0)
+
+        if total_count < needed_terms_in_week:
+            up = max(needed_terms_in_week // len(users_queue), 1)
+            for user_id, value in users_queue.items():
+                users_queue[user_id]["work_count"] += up
 
         avg_count = sum_count // len(users_queue)
 
@@ -215,76 +237,94 @@ class AdjustedWorkSchedulerGenerator:
         return set(group)
 
     def generate_single_mode_worker_table(self, day_key, queue, pre_queue, worker_per_term):
+        label = 'work_count'
         days_cnt = self.days_on_off.count(self.day_dict[day_key])
-        needed_workers_in_week = days_cnt * (self.term_count * worker_per_term)
 
         work_table = getattr(self, 'table')
-        assigned_worker_id_count = getattr(self, 'assigned_worker_id_count')
+        organized_schedule = getattr(self, 'organized_schedule')
 
         work_queue = queue if isinstance(queue, dict) else dict(queue)
         pre_work_queue = pre_queue if isinstance(pre_queue, dict) else dict(pre_queue)
 
-        avg_work_count = needed_workers_in_week / len(work_queue)
+        pre_assigned_workers = self.calc_assigned_workers_cnt(work_table)
 
-        label = 'work_count'
+        needed_workers = days_cnt * self.term_count * worker_per_term
+        if pre_assigned_workers > 0:
+            needed_workers -= (days_cnt * self.term_count)
+
         while True:
             for worker_id, value in work_queue.items():
-                assigned_workers = self.calc_assigned_workers_cnt(work_table)
-                all_workers_work_count_sum = sum(x[label] for k, x in work_queue.items())
-                if assigned_workers == needed_workers_in_week:
+                assigned_workers_in_table = self.calc_assigned_workers_cnt(work_table) - pre_assigned_workers
+                left_work_count_sum = sum(x[label] for x in work_queue.values())
+
+                if assigned_workers_in_table == needed_workers or left_work_count_sum == 0:
                     setattr(self, 'table', work_table)
-                    setattr(self, 'assigned_worker_id_count', assigned_worker_id_count)
+                    setattr(self, 'organized_schedule', organized_schedule)
                     return True
 
+                work_term = max(2, needed_workers // left_work_count_sum)
+                # 남아있는 work_count가 없으면, 편성할 수 없으므로 pass
                 if value[label] == 0:
                     continue
 
+                avg_work_count = max(needed_workers // len(work_queue), 1)
                 cnt = value[label] if value[label] < avg_work_count else avg_work_count
 
-                term = max(2, needed_workers_in_week // all_workers_work_count_sum)
-                assigned_work_cnt, idx, bias, bias_mode = 0, 0, 0, False
                 if worker_id in self.all_exp_relations_id_list:
-                    exp_users, exp_mode = set(self.all_exp_relations_id_list[worker_id]), True
+                    special_relations, s_mode = set(self.all_exp_relations_id_list[worker_id]), True
                 else:
-                    exp_users, exp_mode = None, False
+                    special_relations, s_mode = None, False
 
-                while idx < days_cnt * self.term_count and assigned_work_cnt < cnt:
-                    _idx = (idx + bias) if bias_mode else idx
-                    if value['exp_terms_idx_list'] and _idx in value['exp_terms_idx_list']:
-                        bias, bias_mode = bias + 1, True
-                        continue
+                assigned_work_count = 0
+                bias, bias_mode = 0, False
+                idx = 0
+                while assigned_work_count < cnt:
+                    exps = value["exp_terms_idx_list"]
+                    if exps and idx in exps:
+                        bias_mode = True
+                        x = exps.index(idx)
+                        for i in range(x, len(exps) - 1):
+                            if exps[i + 1] - exps[i] > 1:
+                                bias = exps[i] - idx
+                                break
+
+                    start_i = (idx + bias) if bias_mode else idx
+                    if start_i >= days_cnt * self.term_count:
+                        bias, bias_mode = 0, False
+                        break
+
+                    _idx = self.find_table_idx_to_assign(work_table, self.term_count, worker_per_term, start_i)
+                    if _idx == -1:
+                        bias, bias_mode = 0, False
+                        break
 
                     row, col = _idx // self.term_count, _idx % self.term_count
 
-                    if row >= days_cnt or col >= self.term_count:
-                        idx = 0
-                        bias, bias_mode = 0, False
-                        continue
-
                     workers_set = set(work_table[row][col].keys())
-                    if len(workers_set) >= self.worker_per_term or (exp_mode and workers_set.intersection(exp_users)):
-                        idx += 1
-                        continue
+                    if s_mode and workers_set.intersection(special_relations):
+                        bias, bias_mode = 0, False
+                        break
 
-                    work_table[row][col][worker_id] = value['name']
+                    work_table[row][col][worker_id] = value["name"]
                     bias, bias_mode = 0, False
-                    assigned_work_cnt += 1
-                    idx = _idx + term
+                    assigned_work_count += 1
+                    idx = _idx + work_term
 
-                    if worker_id in assigned_worker_id_count:
-                        assigned_worker_id_count[worker_id] += 1
+                    if worker_id in organized_schedule:
+                        organized_schedule[worker_id] += 1
                     else:
-                        assigned_worker_id_count[worker_id] = 1
+                        organized_schedule[worker_id] = 1
 
-                work_queue[worker_id][label] -= assigned_work_cnt
+                work_queue[worker_id][label] -= assigned_work_count
 
-            left = needed_workers_in_week - self.calc_assigned_workers_cnt(work_table)
-            if sum(v[label] for v in work_queue.values()) == 0:
-                up_1 = math.ceil(left / len(work_queue))
-                for user_id, val in work_queue.items():
-                    work_queue[user_id][label] += up_1
+            work_queue = {k: v for k, v in sorted(work_queue.items(), key=lambda x: x[1][label], reverse=True)}
 
-            work_queue = pre_work_queue | work_queue
+            left = needed_workers - self.calc_assigned_workers_cnt(work_table)
+            up = max(math.ceil(left / len(work_queue)), 1)
+            for user_id, val in work_queue.items():
+                work_queue[user_id][label] += up
+
+            work_queue = work_queue | pre_work_queue
 
     def adjust_work_table(self):
         pass
@@ -294,4 +334,4 @@ class AdjustedWorkSchedulerGenerator:
         scheduler = cls(base_date=base_date, days_on_off=days_on_off)
         scheduler(day_key)
 
-        return getattr(scheduler, 'table'), getattr(scheduler, 'assigned_worker_id_count')
+        return getattr(scheduler, 'table'), getattr(scheduler, 'organized_schedule')
