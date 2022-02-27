@@ -1,8 +1,8 @@
 from PyQt5.QtCore import QDate, Qt
 from PyQt5.QtGui import QFont, QColor
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction, QPushButton, QDateEdit, QCalendarWidget, \
-    QVBoxLayout, QHBoxLayout, QGridLayout, QWidget, QLabel, QListWidget, QListWidgetItem, QGroupBox,\
-    QTableWidget, QTableWidgetItem
+    QVBoxLayout, QHBoxLayout, QGridLayout, QWidget, QLabel, QListWidget, QListWidgetItem, QGroupBox, \
+    QTableWidget, QTableWidgetItem, QAbstractItemView, QMessageBox
 
 from component.window import MenuWindow
 from component.dialog import LogInDialog
@@ -70,6 +70,7 @@ class WindowApplication(QMainWindow):
     def start_date(self, value):
         self._start_date = QDateEdit()
         self._start_date.setDate(value)
+        self._start_date.dateChanged.connect(self.reset_start_date)
 
     @property
     def end_date(self):
@@ -79,6 +80,7 @@ class WindowApplication(QMainWindow):
     def end_date(self, value):
         self._end_date = QDateEdit()
         self._end_date.setDate(value)
+        self._end_date.dateChanged.connect(self.reset_end_date)
 
     @property
     def holiday_list(self):
@@ -87,17 +89,10 @@ class WindowApplication(QMainWindow):
     @holiday_list.setter
     def holiday_list(self, value):
         self._holiday_list = QListWidget()
-
-        for i in range(0, 7):
-            day = value.addDays(i)
-            if day.dayOfWeek() == 6 or day.dayOfWeek() == 7:
-                item = QListWidgetItem()
-
-                holiday = QDateEdit()
-                holiday.setDate(day)
-
-                self._holiday_list.addItem(item)
-                self._holiday_list.setItemWidget(item, holiday)
+        self.reset_holiday_list(
+            start=value,
+            days_cnt=7
+        )
 
     @property
     def add_button(self):
@@ -141,6 +136,7 @@ class WindowApplication(QMainWindow):
     @adjust_button.setter
     def adjust_button(self, value):
         self._adjust_button = QPushButton(value)
+        self._adjust_button.clicked.connect(self.adjust_schedule)
 
     @property
     def time_labels(self):
@@ -258,6 +254,43 @@ class WindowApplication(QMainWindow):
     def show_selected_date(self):
         self.calendar.showSelectedDate()
 
+    def reset_date_range(self, start, end):
+        self.calendar.setDateRange(start, end)
+
+    def reset_start_date(self):
+        start = self.start_date.date()
+        end = self.end_date.date()
+
+        day_diff = start.daysTo(end)
+
+        if day_diff < 0:
+            self.start_date.setDate(end.addDays(-1))
+            QMessageBox.warning(self, "QMessageBox", "종료일을 시작일보다 작게 설정할 수 없습니다.")
+            return False
+
+        self.reset_date_range(start, end)
+        self.reset_holiday_list(
+            start=start,
+            days_cnt=day_diff
+        )
+
+    def reset_end_date(self):
+        start = self.start_date.date()
+        end = self.end_date.date()
+
+        day_diff = start.daysTo(end)
+
+        if day_diff < 0:
+            self.end_date.setDate(start.addDays(1))
+            QMessageBox.warning(self, "QMessageBox", "종료일을 시작일보다 작게 설정할 수 없습니다.")
+            return False
+
+        self.reset_date_range(start, end)
+        self.reset_holiday_list(
+            start=start,
+            days_cnt=day_diff
+        )
+
     def add_holiday_to_list(self):
         item = QListWidgetItem()
 
@@ -271,6 +304,19 @@ class WindowApplication(QMainWindow):
         item = self.holiday_list.selectedItems()
         self.holiday_list.takeItem(self.holiday_list.row(item[0]))
 
+    def reset_holiday_list(self, start, days_cnt):
+        self.holiday_list.clear()
+        for i in range(0, days_cnt):
+            day = start.addDays(i)
+            if day.dayOfWeek() == 6 or day.dayOfWeek() == 7:
+                item = QListWidgetItem()
+
+                holiday = QDateEdit()
+                holiday.setDate(day)
+
+                self._holiday_list.addItem(item)
+                self._holiday_list.setItemWidget(item, holiday)
+
     def create_schedule(self):
         ymd_format = 'yyyy/MM/dd'
 
@@ -280,13 +326,24 @@ class WindowApplication(QMainWindow):
         base_date = start.toString(ymd_format)
 
         days_cnt = start.daysTo(end)
+        if days_cnt == 0:
+            QMessageBox.warning(self, "QMessageBox", "시작일과 종료일을 같게 설정할 수 없습니다.")
+            return False
+        elif days_cnt <= 0:
+            QMessageBox.warning(self, "QMessageBox", "종료일을 시작일보다 작게 설정할 수 없습니다.")
+            return False
+
         days_on_off = [1 for i in range(days_cnt + 1)]
 
         for i in range(self.holiday_list.count()):
             item = self.holiday_list.item(i)
 
             holiday = self.holiday_list.itemWidget(item).date()
-            days_on_off[start.daysTo(holiday)] = 0
+            day_diff = start.daysTo(holiday)
+            if day_diff > days_cnt:
+                continue
+
+            days_on_off[day_diff] = 0
 
         weekday, w_work_count = AdjustedWorkSchedulerGenerator.init_scheduler(
             base_date=base_date,
@@ -319,6 +376,10 @@ class WindowApplication(QMainWindow):
             self.workers[u_id] += u_count
 
         self.set_schedule_table_layout(days_cnt)
+        return True
+
+    def adjust_schedule(self):
+        self.schedule_table.setEditTriggers(QAbstractItemView.AllEditTriggers)
 
     def set_schedule_table_layout(self, days_cnt):
         label_font = QFont()
@@ -349,15 +410,16 @@ class WindowApplication(QMainWindow):
                 self.schedule_table.setItem(row_idx, i, QTableWidgetItem(self.time_labels[j]))
 
                 self.schedule_table.item(row_idx, i).setFont(label_font)
-                self.schedule_table.item(row_idx, i).setBackground(QColor(229, 229, 229))
                 self.schedule_table.item(row_idx, i).setTextAlignment(Qt.AlignHCenter)
-                for k in range(workers_cnt):
+                for k in range(len(users_of_term)):
                     row_idx += 1
                     self.schedule_table.setItem(row_idx, i, QTableWidgetItem(users_of_term[k]))
                     self.schedule_table.item(row_idx, i).setTextAlignment(Qt.AlignHCenter)
 
         self.schedule_table.resizeRowsToContents()
         self.schedule_table.resizeColumnsToContents()
+
+        self.schedule_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
         self.scheduler_box.addWidget(self.schedule_table)
         self.scheduler_box.addWidget(self.save_button)
