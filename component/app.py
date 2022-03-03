@@ -167,17 +167,21 @@ class WindowApplication(QMainWindow):
         setting_menu.addAction(workShiftTermMenu)
         workShiftTermMenu.triggered.connect(self.workShiftTerm)
 
-        db_menu = menu_bar.addMenu("DB 생성/조회")
+        db_menu = menu_bar.addMenu("데이터 관리")
 
-        registerDBMenu = QAction("인원DB 등록", self)
+        registerDBMenu = QAction("인원 등록", self)
         db_menu.addAction(registerDBMenu)
         registerDBMenu.triggered.connect(self.registerDB)
 
-        editviewDBMenu = QAction("인원DB 수정 및 조회", self)
+        addRowDBMenu = QAction("인원 추가", self)
+        db_menu.addAction(addRowDBMenu)
+        addRowDBMenu.triggered.connect(self.addRowDB)
+
+        editviewDBMenu = QAction("인원 수정", self)
         db_menu.addAction(editviewDBMenu)
         editviewDBMenu.triggered.connect(self.editDB)
 
-        deleteDBMenu = QAction("인원DB 삭제", self)
+        deleteDBMenu = QAction("인원 삭제", self)
         db_menu.addAction(deleteDBMenu)
         deleteDBMenu.triggered.connect(self.deleteDB)
 
@@ -435,13 +439,16 @@ class WindowApplication(QMainWindow):
         MenuWindow.menu_window(self, 'config', 'work_shift', 240, 180).show()
 
     def registerDB(self):
-        MenuWindow.menu_window(self, 'db', 'register', 480, 640).show()
+        MenuWindow.menu_window(self, 'db', 'register', 480, 320).show()
+
+    def addRowDB(self):
+        MenuWindow.menu_window(self, 'db', 'add', 480, 320).show()
 
     def editDB(self):
-        MenuWindow.menu_window(self, 'db', 'edit/view', 480, 640).show()
+        MenuWindow.menu_window(self, 'db', 'edit', 480, 320).show()
 
     def deleteDB(self):
-        MenuWindow.menu_window(self, 'db', 'delete', 480, 640).show()
+        MenuWindow.menu_window(self, 'db', 'delete', 480, 320).show()
 
     def outsideOption(self):
         MenuWindow.menu_window(self, 'option', 'outside', 480, 360).show()

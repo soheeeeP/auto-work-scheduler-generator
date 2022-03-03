@@ -6,8 +6,9 @@ window_title_dict = {
         "config": None,
         "db": {
             "register": "파일 등록하기",
-            "edit/view": "데이터베이스 수정하기",
-            "delete": "데이터베이스 삭제하기"
+            "edit": "데이터 수정하기",
+            "add": "데이터 추가하기",
+            "delete": "데이터 삭제하기"
         },
         "option": {
             "outside": "영외 인원 등록하기",
