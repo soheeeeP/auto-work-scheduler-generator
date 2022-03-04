@@ -74,9 +74,12 @@ class LogInDialog(QDialog):
     def sign_up(self, value):
         self._sign_up = QPushButton(value)
 
-    def setupLayout(self):
+    def setWidgetPosition(self):
         center = QDesktopWidget().availableGeometry().center()
         self.setGeometry(center.x() - int(self.width / 2), center.y() - int(self.height / 2), self.width, self.height)
+
+    def setupLayout(self):
+        self.setWidgetPosition()
 
         self.setWindowTitle("관리자 계정 로그인")
 

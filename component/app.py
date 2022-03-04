@@ -200,14 +200,16 @@ class WindowApplication(QMainWindow):
         specialRelationMenu.triggered.connect(self.specialRelationOption)
 
     def setupMainWindow(self):
-        center = QDesktopWidget().availableGeometry().center()
-        self.setGeometry(center.x() - int(self.width / 2), center.y() - int(self.height / 2), self.width, self.height)
+        self.setWidgetPosition()
 
         self.setWindowTitle('Auto work-scheduler generator for Army Soldiers')
-
         self.setupMenuBar()
 
         self.setupLayout()
+
+    def setWidgetPosition(self):
+        center = QDesktopWidget().availableGeometry().center()
+        self.setGeometry(center.x() - int(self.width / 2), center.y() - int(self.height / 2), self.width, self.height)
 
     def setupLayout(self):
         calendar = QGridLayout()
@@ -430,13 +432,13 @@ class WindowApplication(QMainWindow):
         self.scheduler_box.addWidget(self.adjust_button)
 
     def workerPerTerm(self):
-        MenuWindow.menu_window(self, 'config', 'worker', 240, 180).show()
+        MenuWindow.menu_window(self, 'config', 'worker', 240, 120).show()
 
     def assistantMode(self):
-        MenuWindow.menu_window(self, 'config', 'assistant', 240, 180).show()
+        MenuWindow.menu_window(self, 'config', 'assistant', 240, 120).show()
 
     def workShiftTerm(self):
-        MenuWindow.menu_window(self, 'config', 'work_shift', 240, 180).show()
+        MenuWindow.menu_window(self, 'config', 'work_shift', 240, 120).show()
 
     def registerDB(self):
         MenuWindow.menu_window(self, 'db', 'register', 480, 320).show()

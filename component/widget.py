@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt, QDate, QTime, QPropertyAnimation, QSize, QEasingCur
 from PyQt5.QtGui import QPainter
 from PyQt5.QtWidgets import QWidget, QRadioButton, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, \
     QTableWidget, QTableWidgetItem, QMessageBox, QLineEdit, QGridLayout, QTreeWidget, QTreeWidgetItem, \
-    QHeaderView, QDateEdit, QTimeEdit, QAbstractItemView, QSizePolicy, QCheckBox
+    QHeaderView, QDateEdit, QTimeEdit, QAbstractItemView, QSizePolicy, QCheckBox, QDesktopWidget
 
 from db import database
 from component.dialog import AdminDialog
@@ -24,9 +24,6 @@ class RadioButtonWidget(QWidget):
 
     def __init__(self, parent=None):
         super(RadioButtonWidget, self).__init__(parent)
-
-        self._label_title = None
-
         self._on_radio_button = None
         self._off_radio_button = None
         self._save_button = None
@@ -34,12 +31,12 @@ class RadioButtonWidget(QWidget):
         self.vbox = QVBoxLayout()
         self.radio_box = QHBoxLayout()
 
+        self.setWidgetPosition()
+
     def __call__(self, mode):
         self.term_count, self.worker_per_term, self.assistant_mode \
             = self.db.config_repository.get_config()
 
-        self.label_title = self.message_dict[mode]
-        self.label_title.setAlignment(Qt.AlignCenter)
         self.save_button = '저장하기'
 
         # TODO: config constraints를 동적으로 가져오도록 수정
@@ -86,25 +83,16 @@ class RadioButtonWidget(QWidget):
 
             self._save_button.clicked.connect(self.save_radio_checked_value_in_db)
 
-        self.vbox.addWidget(self.label_title)
-        self.vbox.addSpacing(20)
+        self.vbox.addStretch(1)
         self.vbox.addLayout(self.radio_box)
         self.vbox.addWidget(self.save_button)
+        self.vbox.addStretch(1)
 
         self.vbox.setAlignment(Qt.AlignCenter)
 
         self.setLayout(self.vbox)
 
-        self.setGeometry(300, 300, 200, 200)
         self.show()
-
-    @property
-    def label_title(self):
-        return self._label_title
-
-    @label_title.setter
-    def label_title(self, message):
-        self._label_title = QLabel(message)
 
     @property
     def on_radio_button(self):
@@ -129,6 +117,10 @@ class RadioButtonWidget(QWidget):
     @save_button.setter
     def save_button(self, value):
         self._save_button = QPushButton(value)
+
+    def setWidgetPosition(self):
+        center = QDesktopWidget().availableGeometry().center()
+        self.setGeometry(center.x() - int(self.width() / 2), center.y() - int(self.height() / 2), self.width(), self.height())
 
     def save_worker_config_value_in_db(self):
         value = [k for k, v in self.worker.items() if v.isChecked()][0]
@@ -207,6 +199,8 @@ class FileWidget(QWidget):
 
         self.init_table = None
         self.init_row, self.init_col, self.init_data = 0, 0, None
+
+        self.setWidgetPosition()
 
     def __call__(self, mode):
         self.mode = mode
@@ -407,6 +401,10 @@ class FileWidget(QWidget):
         cell_widget.setLayout(layout_cb)
 
         return cell_widget
+
+    def setWidgetPosition(self):
+        center = QDesktopWidget().availableGeometry().center()
+        self.setGeometry(center.x() - int(self.width() / 2), center.y() - int(self.height() / 2), self.width(), self.height())
 
     def setupButtons(self):
         # 인원 등록 메뉴 버튼 (file_open)
