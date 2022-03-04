@@ -177,3 +177,29 @@ class WorkModeInMemoryRepository(WorkModeRepository):
             result[user_id] = user_data
 
         return result
+
+    def drop_term_count_related_columns(self, term_count: int) -> bool:
+        columns_list = ['workmode_id', 'user_id', 'exp_start_datetime', 'exp_end_datetime', 'work_mode']
+
+        self.query.exec_(f"""ALTER TABLE workmode RENAME TO workmode_old;""")
+        self.query.exec_(
+            f"""
+            CREATE TABLE workmode (
+                workmode_id INTEGER primary key autoincrement,
+                user_id INTEGER,
+                exp_start_datetime DATETIME DEFAULT NULL,
+                exp_end_datetime DATETIME DEFAULT NULL,
+                work_mode VARCHAR (30) DEFAULT 'on' CHECK ( work_mode IN ('on', 'off')),
+                foreign key (user_id) REFERENCES user(id) ON DELETE CASCADE
+            );"""
+        )
+        for i in range(term_count):
+            self.query.exec_(f"""ALTER TABLE workmode ADD weekday_{i + 1} BIT DEFAULT 1;""")
+            self.query.exec_(f"""ALTER TABLE workmode ADD holiday_{i + 1} BIT DEFAULT 1;""")
+            columns_list.append(f'weekday_{i+1}')
+            columns_list.append(f'holiday_{i+1}')
+
+        self.query.exec_(f"""INSERT INTO workmode (*) SELECT %s FROM workmode_old;""" % (', '.join(columns_list)))
+        self.query.exec_("""DROP TABLE workmode_old;""")
+
+        return self.query.first()

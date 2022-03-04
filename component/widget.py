@@ -139,7 +139,9 @@ class RadioButtonWidget(QWidget):
     def save_work_shift_config_value_in_db(self):
         value = [k for k, v in self.work_shift.items() if v.isChecked()][0]
         if value:
-            self.db.config_repository.set_config_term_count(term_count=int(value.split('_')[0]))
+            term_count = int(value.split('_')[0])
+            self.db.config_repository.set_config_term_count(term_count=term_count)
+            self.db.work_mode_repository.drop_term_count_related_columns(term_count=term_count)
         self.close_widget()
 
     def save_radio_checked_value_in_db(self):

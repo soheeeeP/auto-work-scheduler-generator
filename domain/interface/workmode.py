@@ -60,3 +60,7 @@ class WorkModeRepository(metaclass=ABCMeta):
     @abstractmethod
     def get_work_mode_users(self) -> Union[Dict, None]:
         pass
+
+    @abstractmethod
+    def drop_term_count_related_columns(self, term_count: int) -> bool:
+        pass
