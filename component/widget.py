@@ -1051,7 +1051,9 @@ class OptionWidget(QWidget):
 class DragTreeWidget(QTreeWidget):
     def __init__(self, parent=None):
         super(DragTreeWidget, self).__init__(parent)
-        self.setTreeWidgetHeader()
+
+    def __call__(self, header_labels):
+        self.setTreeWidgetHeader(header_labels)
 
     def dragEnterEvent(self, event):
         event.accept()
@@ -1067,15 +1069,18 @@ class DragTreeWidget(QTreeWidget):
         self.setAcceptDrops(True)
         self.setDragEnabled(True)
 
-    def setTreeWidgetHeader(self):
-        self.setHeaderLabels(["아이디", "이름"])
+    def setTreeWidgetHeader(self, labels):
+        self.setHeaderLabels(labels)
+        self.header().setDefaultAlignment(Qt.AlignCenter)
         self.header().setSectionResizeMode(QHeaderView.Stretch)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self.hideColumn(0)
 
     @classmethod
-    def list_widget(cls):
+    def list_widget(cls, header_labels):
         widget = cls()
+        widget(header_labels)
         return widget
 
 
@@ -1083,57 +1088,13 @@ class DropTreeWidget(QTreeWidget):
     def __init__(self, parent=None):
         super(DropTreeWidget, self).__init__(parent)
 
-    def __call__(self, mode, value):
+    def __call__(self, mode, data, header_labels):
         self.mode = mode
+        self.raw_data = data
+        self.added_data = None
 
-        if mode == "special_relation":
-            # TODO: 새로 입력된 data와 기존에 table에 존재하던 data 구분하기
-            for v in value:
-                item = QTreeWidgetItem()
-                item.setText(0, str(v["user_1_id"]))
-                item.setText(1, v["user_1_name"])
-                item.setText(2, str(v["user_2_id"]))
-                item.setText(3, v["user_2_name"])
-                self.addTopLevelItem(item)
-
-        elif mode == "outside":
-            for v in value:
-                item = QTreeWidgetItem()
-                item.setText(0, str(v["user_id"]))
-                item.setText(1, v["name"])
-                self.addTopLevelItem(item)
-
-                start_date = QDateEdit()
-                start_date.setDisplayFormat('yyyy/MM/dd')
-                start_date.setDate(QDate.fromString(v["exp_start_datetime"].split(' ')[0], 'yyyy/MM/dd'))
-
-                self.setItemWidget(item, 2, start_date)
-
-                end_date = QDateEdit()
-                end_date.setDisplayFormat('yyyy/MM/dd')
-                end_date.setDate(QDate.fromString(v["exp_end_datetime"].split(' ')[0], 'yyyy/MM/dd'))
-                self.setItemWidget(item, 3, end_date)
-
-        elif mode == "exception":
-            for v in value:
-                item = QTreeWidgetItem()
-                item.setText(0, str(v["user_id"]))
-                item.setText(1, v["name"])
-                self.addTopLevelItem(item)
-
-                _start_datetime = v["exp_start_datetime"].split()
-                _end_datetime = v["exp_end_datetime"].split()
-                date = QDateEdit()
-                date.setDate(QDate.fromString(_start_datetime[0], 'yyyy/MM/dd'))
-                self.setItemWidget(item, 2, date)
-
-                start_time = QTimeEdit()
-                start_time.setTime(QTime.fromString(_start_datetime[1], 'hh:mm'))
-                self.setItemWidget(item, 3, start_time)
-
-                end_time = QTimeEdit()
-                end_time.setTime(QTime.fromString(_end_datetime[1], 'hh:mm'))
-                self.setItemWidget(item, 4, end_time)
+        self.setTreeWidgetHeader(header_labels)
+        self.initTreeWidgetItems()
 
     def setDropMode(self):
         self.setDragDropMode(QAbstractItemView.DropOnly)
@@ -1162,9 +1123,64 @@ class DropTreeWidget(QTreeWidget):
                 item.setText(2, id_value)
                 item.setText(3, value)
 
+    def initTreeWidgetItems(self):
+        if self.mode == "special_relation":
+            for v in self.raw_data:
+                item = QTreeWidgetItem()
+                item.setText(0, str(v["user_1_id"]))
+                item.setText(1, v["user_1_name"])
+                item.setText(2, str(v["user_2_id"]))
+                item.setText(3, v["user_2_name"])
+                item.setTextAlignment(1, Qt.AlignHCenter)
+                item.setTextAlignment(3, Qt.AlignHCenter)
+                self.addTopLevelItem(item)
+
+        elif self.mode == "outside":
+            for v in self.raw_data:
+                item = QTreeWidgetItem()
+                item.setText(0, str(v["user_id"]))
+                item.setText(1, v["name"])
+                item.setTextAlignment(1, Qt.AlignHCenter)
+                self.addTopLevelItem(item)
+
+                start_date = QDateEdit()
+                start_date.setDisplayFormat('yyyy/MM/dd')
+                start_date.setDate(QDate.fromString(v["exp_start_datetime"].split(' ')[0], 'yyyy/MM/dd'))
+
+                self.setItemWidget(item, 2, start_date)
+
+                end_date = QDateEdit()
+                end_date.setDisplayFormat('yyyy/MM/dd')
+                end_date.setDate(QDate.fromString(v["exp_end_datetime"].split(' ')[0], 'yyyy/MM/dd'))
+                self.setItemWidget(item, 3, end_date)
+
+        elif self.mode == "exception":
+            for v in self.raw_data:
+                item = QTreeWidgetItem()
+                item.setText(0, str(v["user_id"]))
+                item.setText(1, v["name"])
+                item.setTextAlignment(1, Qt.AlignHCenter)
+                self.addTopLevelItem(item)
+
+                _start_datetime = v["exp_start_datetime"].split()
+                _end_datetime = v["exp_end_datetime"].split()
+                date = QDateEdit()
+                date.setDate(QDate.fromString(_start_datetime[0], 'yyyy/MM/dd'))
+                self.setItemWidget(item, 2, date)
+
+                start_time = QTimeEdit()
+                start_time.setTime(QTime.fromString(_start_datetime[1], 'hh:mm'))
+                self.setItemWidget(item, 3, start_time)
+
+                end_time = QTimeEdit()
+                end_time.setTime(QTime.fromString(_end_datetime[1], 'hh:mm'))
+                self.setItemWidget(item, 4, end_time)
+
     def setTreeWidgetHeader(self, labels):
         self.setHeaderLabels(labels)
+        self.header().setDefaultAlignment(Qt.AlignCenter)
         self.header().setSectionResizeMode(QHeaderView.Stretch)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self.setColumnHidden(0, True)
 
@@ -1184,9 +1200,9 @@ class DropTreeWidget(QTreeWidget):
             self.header().resizeSection(4, 20)
 
     @classmethod
-    def tree_widget(cls, mode, value):
+    def tree_widget(cls, mode, data, header_labels):
         widget = cls()
-        widget(mode, value)
+        widget(mode, data, header_labels)
         return widget
 
 
