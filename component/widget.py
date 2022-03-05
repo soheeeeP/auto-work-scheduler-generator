@@ -476,6 +476,27 @@ class FileWidget(QWidget):
         self.save = '저장하기'
         self.save.clicked.connect(self.save_db)
 
+    def reset_register_mode_button_layout(self):
+        self.layout.addWidget(self.table, 0, 0, 2, 12)
+        self.layout.addWidget(self.file_open, 3, 0, 1, 4)
+        self.layout.addWidget(self.revert, 3, 4, 1, 4)
+        self.layout.addWidget(self.save, 3, 8, 1, 4)
+
+    def reset_add_mode_button_layout(self):
+        self.layout.addWidget(self.add_item, 3, 0, 1, 3)
+        self.layout.addWidget(self.add_file, 3, 3, 1, 3)
+        self.layout.addWidget(self.revert, 3, 6, 1, 3)
+        self.layout.addWidget(self.save, 3, 9, 1, 3)
+
+    def reset_whole_button_layout(self):
+        self.setup_revert_button()
+        self.setup_save_button()
+        if self.mode == "register":
+            self.layout.addWidget(self.file_open, 3, 0, 1, 12)
+        elif self.mode == "add":
+            self.layout.addWidget(self.add_item, 3, 0, 1, 6)
+            self.layout.addWidget(self.add_file, 3, 6, 1, 6)
+
     def get_csv_file(self):
         file_filter = ['.csv', '.xls', '.xml', '.xlsx', '.xlsm']
 
@@ -634,6 +655,8 @@ class FileWidget(QWidget):
                 if item:
                     item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
 
+        self.reset_add_mode_button_layout()
+
     def add_rows_from_new_csv(self):
         s = self.table.rowCount()
         for i in range(s, s + self.row):
@@ -658,20 +681,14 @@ class FileWidget(QWidget):
 
         self.table.verticalHeader().setDefaultSectionSize(25)
 
-        self.layout.addWidget(self.add_item, 3, 0, 1, 3)
-        self.layout.addWidget(self.add_file, 3, 3, 1, 3)
-        self.layout.addWidget(self.revert, 3, 6, 1, 3)
-        self.layout.addWidget(self.save, 3, 9, 1, 3)
+        self.reset_add_mode_button_layout()
 
     def reset_rows_from_new_csv(self):
         self.table.setRowCount(0)
         self.table = (self.row, self.col, self.data)
         self.table.verticalHeader().setDefaultSectionSize(25)
 
-        self.layout.addWidget(self.table, 0, 0, 2, 12)
-        self.layout.addWidget(self.file_open, 3, 0, 1, 4)
-        self.layout.addWidget(self.revert, 3, 4, 1, 4)
-        self.layout.addWidget(self.save, 3, 8, 1, 4)
+        self.reset_register_mode_button_layout()
 
     def revert_table(self):
         if self.init_table is None:
@@ -687,13 +704,7 @@ class FileWidget(QWidget):
         self.layout.replaceWidget(prev_table, self.table)
         self.table.verticalHeader().setDefaultSectionSize(25)
 
-        self.setup_revert_button()
-        self.setup_save_button()
-        if self.mode == "register":
-            self.layout.addWidget(self.file_open, 3, 0, 1, 12)
-        elif self.mode == "add":
-            self.layout.addWidget(self.add_item, 3, 0, 1, 6)
-            self.layout.addWidget(self.add_file, 3, 6, 1, 6)
+        self.reset_whole_button_layout()
 
     def edit_db(self):
         message = QMessageBox.question(self, "QMessageBox", "수정하시겠습니까?", QMessageBox.No | QMessageBox.Yes)
