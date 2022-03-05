@@ -779,39 +779,77 @@ class OptionWidget(QWidget):
         self.listbox_data = self.db.user_repository.get_all_users()
 
         self.search_content = QLineEdit()
+        self._search_button = None
+        self._add_button = None
+        self._remove_button = None
+        self._save_button = None
+
+    def setupLayout(self):
+        search = QHBoxLayout()
+        search.addWidget(self.search_content)
+        search.addWidget(self.search_button)
+
+        listbox = QHBoxLayout()
+        listbox.addWidget(self.user_listbox)
+
+        buttons = QVBoxLayout()
+        buttons.addStretch(1)
+        if self.mode != "special_relation":
+            buttons.addWidget(self.add_button)
+        buttons.addWidget(self.remove_button)
+        buttons.addWidget(self.save_button)
+        buttons.addStretch(1)
+
+        selected = QHBoxLayout()
+        selected.addWidget(self.selected_box)
+
+        layout = QGridLayout()
+        layout.addLayout(search, 0, 0, 1, 4)
+        layout.addLayout(listbox, 1, 0)
+        layout.addLayout(buttons, 1, 1)
+        layout.addLayout(selected, 1, 2)
+
+        layout.setColumnStretch(0, 2)
+        layout.setColumnStretch(1, 1)
+        layout.setColumnStretch(2, 4)
+        lr_margin, tb_margin = self.width() * 0.05, self.height() * 0.05
+        layout.setContentsMargins(lr_margin, tb_margin, lr_margin, tb_margin)
+
+        self.setLayout(layout)
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+    def setupButtons(self):
+        self.setup_search_button()
+        self.setup_add_button()
+        self.setup_remove_button()
+        self.setup_save_button()
+
+    def setup_search_button(self):
+        if self.search_button:
+            self.search_button.deleteLater()
         self.search_button = "검색"
         self.search_button.clicked.connect(self.display_users_name_in_listbox)
 
+    def setup_add_button(self):
+        if self.add_button:
+            self.add_button.deleteLater()
         self.add_button = "추가"
         self.add_button.clicked.connect(self.add_item_to_select_box)
+
+    def setup_remove_button(self):
+        if self.remove_button:
+            self.remove_button.deleteLater()
         self.remove_button = "삭제"
         self.remove_button.clicked.connect(self.remove_item_from_select_box)
+
+    def setup_save_button(self):
+        if self.save_button:
+            self.save_button.deleteLater()
         self.save_button = "저장"
-
-    def setupLayout(self):
-        search_layout = QGridLayout()
-        search_layout.addWidget(self.search_content, 0, 0)
-        search_layout.addWidget(self.search_button, 0, 1)
-
-        listbox_layout = QGridLayout()
-        listbox_layout.addWidget(self.user_listbox, 0, 0)
-
-        row = 0
-        if self.mode != "special_relation":
-            listbox_layout.addWidget(self.add_button, row, 1)
-            row += 1
-
-        listbox_layout.addWidget(self.remove_button, row, 1)
-        listbox_layout.addWidget(self.save_button, row + 1, 1)
-
-        listbox_layout.addWidget(self.selected_box, 0, 2)
-
-        layout = QGridLayout()
-        layout.addLayout(search_layout, 0, 0)
-        layout.addLayout(listbox_layout, 1, 0)
-        layout.setContentsMargins(40, 30, 40, 30)
-
-        self.setLayout(layout)
+        if self.mode == "special_relation":
+            self.save_button.clicked.connect(self.save_relation_to_db)
+        else:
+            self.save_button.clicked.connect(self.save_exp_datetime_to_db)
 
     @property
     def search_button(self):
@@ -847,14 +885,6 @@ class OptionWidget(QWidget):
         self._remove_button = QPushButton(value)
         self._remove_button.setStyleSheet("")
 
-    # @property
-    # def user_listbox(self):
-    #     return self._user_listbox
-    #
-    # @user_listbox.setter
-    # def user_listbox(self, value):
-    #     self._user_listbox = DragTreeWidget().list_widget(value)
-
     def __call__(self, mode):
         self.mode = mode
         self.term_count = self.db.config_repository.get_config()[0]
@@ -864,27 +894,23 @@ class OptionWidget(QWidget):
         if mode == 'special_relation':
             admin = AdminDialog(login_user=settings.login_user)
             admin.exec_()
-
             if admin.access_approval is False:
                 return False
-            self.save_button.clicked.connect(self.save_relation_to_db)
 
             exp_data = self.db.user_repository.get_all_exp_relation()
         else:
-            self.save_button.clicked.connect(self.save_exp_datetime_to_db)
-
             exp_data = self.db.work_mode_repository.get_exp_datetime_exists_users()
 
-        self.selected_box = DropTreeWidget.tree_widget(mode, exp_data)
-        self.selected_box.setTreeWidgetHeader(header_labels)
+        self.selected_box = DropTreeWidget.tree_widget(mode, exp_data, header_labels)
 
-        self.user_listbox = DragTreeWidget.list_widget()
+        self.user_listbox = DragTreeWidget.list_widget(["아이디", "이름"])
         self.display_users_name_in_listbox()
 
         if mode == 'special_relation':
             self.user_listbox.setDragMode(mode)
             self.selected_box.setDropMode()
 
+        self.setupButtons()
         self.setupLayout()
 
         return True
@@ -909,32 +935,32 @@ class OptionWidget(QWidget):
                 i = QTreeWidgetItem()
                 i.setText(0, str(user_id))
                 i.setText(1, name)
-
+                i.setTextAlignment(1, Qt.AlignHCenter)
                 items.append(i)
-            self.user_listbox.addTopLevelItems(items)
-            return
+        else:
+            selected_names = []
+            for i in range(self.selected_box.topLevelItemCount()):
+                selected_names.append(self.selected_box.topLevelItem(i).text(1))
 
-        selected_names = []
-        for i in range(self.selected_box.topLevelItemCount()):
-            selected_names.append(self.selected_box.topLevelItem(i).text(1))
-
-        for d in self.listbox_data:
-            user_id, name = d["id"], d["name"]
-            if name not in selected_names:
-                i = QTreeWidgetItem()
-                i.setText(0, str(user_id))
-                i.setText(1, name)
-
-                items.append(i)
+            for d in self.listbox_data:
+                user_id, name = d["id"], d["name"]
+                if name not in selected_names:
+                    i = QTreeWidgetItem()
+                    i.setText(0, str(user_id))
+                    i.setText(1, name)
+                    i.setTextAlignment(1, Qt.AlignHCenter)
+                    items.append(i)
 
         self.user_listbox.addTopLevelItems(items)
         return
 
     def add_item_to_select_box(self):
-        item = self.user_listbox.selectedItems()[0]
+        items = self.user_listbox.selectedItems()
+        if len(items) == 0:
+            return
+
+        item = items[0]
         user_id, name = item.text(0), item.text(1)
-        print(user_id)
-        print(name)
 
         row = self.user_listbox.currentIndex().row()
         removed_from_userbox = self.user_listbox.takeTopLevelItem(row)
@@ -942,6 +968,7 @@ class OptionWidget(QWidget):
         tree_widget_item = QTreeWidgetItem()
         tree_widget_item.setText(0, user_id)
         tree_widget_item.setText(1, name)
+        tree_widget_item.setTextAlignment(1, Qt.AlignCenter)
 
         self.selected_box.addTopLevelItem(tree_widget_item)
 
@@ -970,10 +997,13 @@ class OptionWidget(QWidget):
     def remove_item_from_select_box(self):
         row = self.selected_box.currentIndex().row()
         removed_item = self.selected_box.takeTopLevelItem(row)
+        if not removed_item:
+            return
 
         if self.mode != "special_relation":
             name = removed_item.text(0)
-            self.user_listbox.addItem(name)
+            # BUGFIX: addItem()
+            # self.user_listbox.addItem(name)
 
     def get_drop_widget_data(self):
         cnt = self.selected_box.columnCount()
