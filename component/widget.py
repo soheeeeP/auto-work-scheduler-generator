@@ -5,11 +5,12 @@ import pathlib
 from PyQt5.QtCore import Qt, QDate, QTime, QPropertyAnimation, QSize, QEasingCurve, pyqtProperty
 from PyQt5.QtGui import QPainter
 from PyQt5.QtWidgets import QWidget, QRadioButton, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, \
-    QTableWidget, QTableWidgetItem, QMessageBox, QLineEdit, QGridLayout, QTreeWidget, QTreeWidgetItem, \
+    QTableWidget, QTableWidgetItem, QLineEdit, QGridLayout, QTreeWidget, QTreeWidgetItem, \
     QHeaderView, QDateEdit, QTimeEdit, QAbstractItemView, QSizePolicy, QCheckBox, QDesktopWidget
 
 from db import database
 from component.dialog import AdminDialog
+from component.message import *
 import settings
 
 
@@ -501,13 +502,12 @@ class FileWidget(QWidget):
         file_filter = ['.csv', '.xls', '.xml', '.xlsx', '.xlsm']
 
         if self.mode == "register" and len(self.data) > 0:
-            message = QMessageBox.information(
+            message_box = setInformationMessageBox(
                 self,
                 "파일 등록하기",
-                "이미 등록된 데이터가 있습니다. 새로 등록하시겠습니까?\n (기존의 데이터가 모두 사라집니다)",
-                QMessageBox.Yes | QMessageBox.Cancel
+                "이미 등록된 데이터가 있습니다. 새로 등록하시겠습니까?\n (기존의 데이터가 모두 사라집니다)"
             )
-            if message == QMessageBox.Cancel:
+            if message_box is False:
                 return
 
         try:
@@ -523,15 +523,12 @@ class FileWidget(QWidget):
             path = pathlib.Path(file_path)
             parent, name, ext = path.parent, path.name, path.suffix
         except ValueError:
-            QMessageBox.critical(self, "QMessageBox", "잘못된 파일 경로입니다.", QMessageBox.Close)
-            return
+            return setCriticalMessageBox(self, "잘못된 파일 경로입니다.")
         else:
             if not file_path:
                 return
             if ext and ext not in file_filter:
-                QMessageBox.critical(self, "QMessageBox", f'유효하지 않은 파일 확장자입니다. \n (*{" *".join(file_filter)})"',
-                                     QMessageBox.Close)
-                return
+                return setCriticalMessageBox(self, f'유효하지 않은 파일 확장자입니다. \n (*{" *".join(file_filter)})"')
 
         data = []
         if ext == '.csv':
@@ -616,8 +613,8 @@ class FileWidget(QWidget):
         return user_list
 
     def save_db(self):
-        message = QMessageBox.question(self, "QMessageBox", "저장하시겠습니까?", QMessageBox.No | QMessageBox.Yes)
-        if message == QMessageBox.No:
+        message_box = setQuestionMessageBox(self, "저장하시겠습니까?")
+        if message_box is False:
             return
 
         if self.mode == "register":
@@ -692,11 +689,10 @@ class FileWidget(QWidget):
 
     def revert_table(self):
         if self.init_table is None:
-            QMessageBox.about(self, "QMessageBox", "되돌릴 수 있는 데이터가 없습니다.")
-            return
+            return setAboutMessageBox(self, "되돌릴 수 있는 데이터가 없습니다.")
 
-        message = QMessageBox.question(self, "QMessageBox", "되돌리시겠습니까?", QMessageBox.No | QMessageBox.Yes)
-        if message == QMessageBox.No:
+        message_box = setQuestionMessageBox(self, "되돌리시겠습니까?")
+        if message_box is False:
             return
 
         prev_table = self.table
@@ -707,8 +703,8 @@ class FileWidget(QWidget):
         self.reset_whole_button_layout()
 
     def edit_db(self):
-        message = QMessageBox.question(self, "QMessageBox", "수정하시겠습니까?", QMessageBox.No | QMessageBox.Yes)
-        if message == QMessageBox.No:
+        message_box = setQuestionMessageBox(self, "수정하시겠습니까?")
+        if message_box is False:
             return
 
         _user_list = self.get_table_raw_data()  # 수정되기 전의 data
@@ -728,8 +724,8 @@ class FileWidget(QWidget):
         self.close_widget()
 
     def delete_row(self):
-        message = QMessageBox.question(self, "QMessageBox", "데이터를 삭제하시겠습니까?", QMessageBox.No | QMessageBox.Yes)
-        if message == QMessageBox.No:
+        message_box = setQuestionMessageBox(self, "데이터를 삭제하시겠습니까?")
+        if message_box is False:
             return
 
         idx = self.table.selectedRanges()[0]
@@ -743,8 +739,8 @@ class FileWidget(QWidget):
                 self.table.removeRow(i)
 
     def clear_db(self):
-        message = QMessageBox.question(self, "QMessageBox", "전부 삭제하시겠습니까?", QMessageBox.No | QMessageBox.Yes)
-        if message == QMessageBox.No:
+        message_box = setQuestionMessageBox(self, "전부 삭제하시겠습니까?")
+        if message_box is False:
             return
 
         self.db.user_repository.delete_all_users()
@@ -1025,6 +1021,11 @@ class OptionWidget(QWidget):
         if _data is None:
             print('저장할 데이터가 없습니다')
             return
+
+        message_box = setQuestionMessageBox(self, "저장하시겠습니까?")
+        if message_box is False:
+            return
+
         # TODO: exp_datetime 수정시, workmode 수정
         if self.mode == "outside":
             for d in _data:
@@ -1055,6 +1056,10 @@ class OptionWidget(QWidget):
         _data = self.get_drop_widget_data()
         if _data is None:
             print('저장할 데이터가 없습니다')
+            return
+
+        message_box = setQuestionMessageBox(self, "저장하시겠습니까?")
+        if message_box is False:
             return
 
         for d in _data:
