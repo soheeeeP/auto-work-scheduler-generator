@@ -78,10 +78,7 @@ class WorkModeInMemoryRepository(WorkModeRepository):
         if not self.query.first():
             raise NameError(f'user whose id is {user_id} does not exist')
 
-        del option['id']
-
-        keys = tuple(option.keys())
-        values = tuple(option.values())
+        keys, values = tuple(option.keys()), tuple(option.values())
 
         self.query.exec_(f"""UPDATE workmode SET {keys} = {values} WHERE user_id = '{user_id}';""")
 
