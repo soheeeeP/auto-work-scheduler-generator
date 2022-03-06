@@ -779,6 +779,9 @@ class OptionWidget(QWidget):
         self._add_button = None
         self._remove_button = None
         self._save_button = None
+        self._revert_button = None
+
+        self.init_data = None
 
     def setupLayout(self):
         search = QHBoxLayout()
@@ -794,6 +797,7 @@ class OptionWidget(QWidget):
             buttons.addWidget(self.add_button)
         buttons.addWidget(self.remove_button)
         buttons.addWidget(self.save_button)
+        buttons.addWidget(self.revert_button)
         buttons.addStretch(1)
 
         selected = QHBoxLayout()
@@ -819,6 +823,7 @@ class OptionWidget(QWidget):
         self.setup_add_button()
         self.setup_remove_button()
         self.setup_save_button()
+        self.setup_revert_button()
 
     def setup_search_button(self):
         if self.search_button:
@@ -846,6 +851,12 @@ class OptionWidget(QWidget):
             self.save_button.clicked.connect(self.save_relation_to_db)
         else:
             self.save_button.clicked.connect(self.save_exp_datetime_to_db)
+
+    def setup_revert_button(self):
+        if self.revert_button:
+            self.revert_button.deleteLater()
+        self.revert_button = "되돌리기"
+        self.revert_button.clicked.connect(self.revert_to_initial_tree)
 
     @property
     def search_button(self):
@@ -881,6 +892,14 @@ class OptionWidget(QWidget):
         self._remove_button = QPushButton(value)
         self._remove_button.setStyleSheet("")
 
+    @property
+    def revert_button(self):
+        return self._revert_button
+
+    @revert_button.setter
+    def revert_button(self, value):
+        self._revert_button = QPushButton(value)
+
     def __call__(self, mode):
         self.mode = mode
         self.term_count = self.db.config_repository.get_config()[0]
@@ -897,6 +916,7 @@ class OptionWidget(QWidget):
         else:
             exp_data = self.db.exp_datetime_repository.get_all_exp_datetime()
 
+        self.init_data = exp_data
         self.selected_box = DropTreeWidget.tree_widget(mode, exp_data, header_labels)
 
         self.user_listbox = DragTreeWidget.list_widget(["아이디", "이름"])
@@ -995,9 +1015,16 @@ class OptionWidget(QWidget):
             return
 
         if self.mode != "special_relation":
-            name = removed_item.text(0)
-            # BUGFIX: addItem()
-            # self.user_listbox.addItem(name)
+            user_id, name = removed_item.text(0), removed_item.text(1)
+
+            item = QTreeWidgetItem()
+            item.setText(0, str(user_id))
+            item.setText(1, name)
+            item.setTextAlignment(1, Qt.AlignHCenter)
+            self.user_listbox.addTopLevelItem(item)
+
+    def revert_to_initial_tree(self):
+        self.selected_box.resetTreeWidgetItems(self.init_data)
 
     def get_drop_widget_data(self):
         cnt = self.selected_box.columnCount()
@@ -1118,6 +1145,7 @@ class DragTreeWidget(QTreeWidget):
 class DropTreeWidget(QTreeWidget):
     def __init__(self, parent=None):
         super(DropTreeWidget, self).__init__(parent)
+        self.raw_data = None
 
     def __call__(self, mode, data, header_labels):
         self.mode = mode
@@ -1287,6 +1315,11 @@ class DropTreeWidget(QTreeWidget):
 
         elif self.mode == "exception":
             self.init_exception_relation_tree()
+
+    def resetTreeWidgetItems(self, data):
+        self.raw_data = data
+        self.clear()
+        self.initTreeWidgetItems()
 
     def setTreeWidgetHeader(self, labels):
         self.setHeaderLabels(labels)
