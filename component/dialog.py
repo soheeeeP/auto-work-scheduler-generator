@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 
 from PyQt5.QtWidgets import QPushButton, QLineEdit, QGridLayout, QDialog, QLabel, QDesktopWidget, QMessageBox
 
+from component.message import setCriticalMessageBox
+
 load_dotenv()
 
 config = {
@@ -21,14 +23,6 @@ config = {
 
 firebase = pyrebase.initialize_app(config)
 db = firebase.database()
-
-
-def setCriticalMessageBox(window, message):
-    box = QMessageBox.critical(window, "QMessageBox", message, QMessageBox.Close)
-
-    center = QDesktopWidget().availableGeometry().center()
-    window.setGeometry(center.x() - int(window.width / 2), center.y() - int(window.height / 2), window.width, window.height)
-    return box
 
 
 class LogInDialog(QDialog):
@@ -74,9 +68,12 @@ class LogInDialog(QDialog):
     def sign_up(self, value):
         self._sign_up = QPushButton(value)
 
-    def setupLayout(self):
+    def setWidgetPosition(self):
         center = QDesktopWidget().availableGeometry().center()
         self.setGeometry(center.x() - int(self.width / 2), center.y() - int(self.height / 2), self.width, self.height)
+
+    def setupLayout(self):
+        self.setWidgetPosition()
 
         self.setWindowTitle("관리자 계정 로그인")
 

@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction, QPushButton, Q
     QTableWidget, QTableWidgetItem, QAbstractItemView, QMessageBox
 
 from component.window import MenuWindow
+from component.message import *
 from component.dialog import LogInDialog
 from settings import login
 
@@ -167,17 +168,21 @@ class WindowApplication(QMainWindow):
         setting_menu.addAction(workShiftTermMenu)
         workShiftTermMenu.triggered.connect(self.workShiftTerm)
 
-        db_menu = menu_bar.addMenu("DB 생성/조회")
+        db_menu = menu_bar.addMenu("데이터 관리")
 
-        registerDBMenu = QAction("인원DB 등록", self)
+        registerDBMenu = QAction("인원 등록", self)
         db_menu.addAction(registerDBMenu)
         registerDBMenu.triggered.connect(self.registerDB)
 
-        editviewDBMenu = QAction("인원DB 수정 및 조회", self)
+        addRowDBMenu = QAction("인원 추가", self)
+        db_menu.addAction(addRowDBMenu)
+        addRowDBMenu.triggered.connect(self.addRowDB)
+
+        editviewDBMenu = QAction("인원 수정", self)
         db_menu.addAction(editviewDBMenu)
         editviewDBMenu.triggered.connect(self.editDB)
 
-        deleteDBMenu = QAction("인원DB 삭제", self)
+        deleteDBMenu = QAction("인원 삭제", self)
         db_menu.addAction(deleteDBMenu)
         deleteDBMenu.triggered.connect(self.deleteDB)
 
@@ -196,14 +201,16 @@ class WindowApplication(QMainWindow):
         specialRelationMenu.triggered.connect(self.specialRelationOption)
 
     def setupMainWindow(self):
-        center = QDesktopWidget().availableGeometry().center()
-        self.setGeometry(center.x() - int(self.width / 2), center.y() - int(self.height / 2), self.width, self.height)
+        self.setWidgetPosition()
 
         self.setWindowTitle('Auto work-scheduler generator for Army Soldiers')
-
         self.setupMenuBar()
 
         self.setupLayout()
+
+    def setWidgetPosition(self):
+        center = QDesktopWidget().availableGeometry().center()
+        self.setGeometry(center.x() - int(self.width / 2), center.y() - int(self.height / 2), self.width, self.height)
 
     def setupLayout(self):
         calendar = QGridLayout()
@@ -265,8 +272,7 @@ class WindowApplication(QMainWindow):
 
         if day_diff < 0:
             self.start_date.setDate(end.addDays(-1))
-            QMessageBox.warning(self, "QMessageBox", "종료일을 시작일보다 작게 설정할 수 없습니다.")
-            return False
+            return setWarningMessageBox(self, "종료일을 시작일보다 작게 설정할 수 없습니다.")
 
         self.reset_date_range(start, end)
         self.reset_holiday_list(
@@ -282,8 +288,7 @@ class WindowApplication(QMainWindow):
 
         if day_diff < 0:
             self.end_date.setDate(start.addDays(1))
-            QMessageBox.warning(self, "QMessageBox", "종료일을 시작일보다 작게 설정할 수 없습니다.")
-            return False
+            return setWarningMessageBox(self, "종료일을 시작일보다 작게 설정할 수 없습니다.")
 
         self.reset_date_range(start, end)
         self.reset_holiday_list(
@@ -327,11 +332,9 @@ class WindowApplication(QMainWindow):
 
         days_cnt = start.daysTo(end)
         if days_cnt == 0:
-            QMessageBox.warning(self, "QMessageBox", "시작일과 종료일을 같게 설정할 수 없습니다.")
-            return False
+            return setWarningMessageBox(self, "시작일과 종료일을 같게 설정할 수 없습니다.")
         elif days_cnt <= 0:
-            QMessageBox.warning(self, "QMessageBox", "종료일을 시작일보다 작게 설정할 수 없습니다.")
-            return False
+            return setWarningMessageBox(self, "종료일을 시작일보다 작게 설정할 수 없습니다.")
 
         days_on_off = [1 for i in range(days_cnt + 1)]
 
@@ -426,22 +429,25 @@ class WindowApplication(QMainWindow):
         self.scheduler_box.addWidget(self.adjust_button)
 
     def workerPerTerm(self):
-        MenuWindow.menu_window(self, 'config', 'worker', 240, 180).show()
+        MenuWindow.menu_window(self, 'config', 'worker', 240, 120).show()
 
     def assistantMode(self):
-        MenuWindow.menu_window(self, 'config', 'assistant', 240, 180).show()
+        MenuWindow.menu_window(self, 'config', 'assistant', 240, 120).show()
 
     def workShiftTerm(self):
-        MenuWindow.menu_window(self, 'config', 'work_shift', 240, 180).show()
+        MenuWindow.menu_window(self, 'config', 'work_shift', 240, 120).show()
 
     def registerDB(self):
-        MenuWindow.menu_window(self, 'db', 'register', 480, 640).show()
+        MenuWindow.menu_window(self, 'db', 'register', 480, 320).show()
+
+    def addRowDB(self):
+        MenuWindow.menu_window(self, 'db', 'add', 480, 320).show()
 
     def editDB(self):
-        MenuWindow.menu_window(self, 'db', 'edit/view', 480, 640).show()
+        MenuWindow.menu_window(self, 'db', 'edit', 480, 320).show()
 
     def deleteDB(self):
-        MenuWindow.menu_window(self, 'db', 'delete', 480, 640).show()
+        MenuWindow.menu_window(self, 'db', 'delete', 480, 320).show()
 
     def outsideOption(self):
         MenuWindow.menu_window(self, 'option', 'outside', 480, 360).show()
