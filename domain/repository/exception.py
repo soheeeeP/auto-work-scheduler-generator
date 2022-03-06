@@ -11,6 +11,7 @@ class DateTimeExceptionInMemoryRepository(DateTimeExceptionRepository):
         data = {
             "id": self.query.value(record.indexOf("id")),
             "user_id": self.query.value(record.indexOf("user_id")),
+            "user_name": self.query.value(record.indexOf("user_name")),
             "start": self.query.value(record.indexOf("start_datetime")),
             "end": self.query.value(record.indexOf("end_datetime"))
         }
@@ -22,6 +23,7 @@ class DateTimeExceptionInMemoryRepository(DateTimeExceptionRepository):
         value_dict = {
             "id": record.indexOf("id"),
             "user_id": record.indexOf("user_id"),
+            "user_name": record.indexOf("user_name"),
             "start": record.indexOf("start_datetime"),
             "end": record.indexOf("end_datetime")
         }
@@ -70,20 +72,24 @@ class DateTimeExceptionInMemoryRepository(DateTimeExceptionRepository):
         return self.query.value(0) if self.query.first() else None
 
     def get_all_exp_datetime(self) -> Union[List[Dict], None]:
-        self.query.exec_("SELECT * FROM exp_datetime")
-        if not self.query.first():
-            return None
-
+        self.query.exec_(
+            """
+            SELECT e.id as id, u.id as user_id, u.name as user_name, e.start_datetime, e.end_datetime
+            FROM exp_datetime e inner join user u on u.id = e.user_id;
+            """
+        )
         result = []
         while self.query.next():
             result.append(self.print_exp_info_from_query())
         return result
 
     def get_exp_datetime(self, exp_id: int) -> Union[Dict, NameError]:
-        self.query.exec_(f"""SELECT * FROM exp_datetime WHERE id='{exp_id}';""")
-        if not self.query.first():
-            raise NameError('exp_datetime does not exist')
-
+        self.query.exec_(
+            f"""
+            SELECT e.id as id, u.id as user_id, u.name as user_name, e.start_datetime, e.end_datetime
+            FROM exp_datetime e inner join user u on u.id = e.user_id WHERE e.id='{exp_id}';
+            """
+        )
         return self.print_exp_info_from_query()
 
     def delete_all_exp_datetime(self):
