@@ -805,7 +805,7 @@ class OptionWidget(QWidget):
         layout.addLayout(buttons, 1, 1)
         layout.addLayout(selected, 1, 2)
 
-        layout.setColumnStretch(0, 2)
+        layout.setColumnStretch(0, 1)
         layout.setColumnStretch(1, 1)
         layout.setColumnStretch(2, 4)
         lr_margin, tb_margin = self.width() * 0.05, self.height() * 0.05
@@ -1087,6 +1087,7 @@ class DragTreeWidget(QTreeWidget):
 
     def __call__(self, header_labels):
         self.setTreeWidgetHeader(header_labels)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
     def dragEnterEvent(self, event):
         event.accept()
@@ -1238,12 +1239,14 @@ class DropTreeWidget(QTreeWidget):
             item = QTreeWidgetItem()
             item.setText(0, id_value)
             item.setText(1, value)
+            item.setTextAlignment(1, Qt.AlignHCenter)
             self.addTopLevelItem(item)
         elif col == 3:
             item = self.topLevelItem(row)
             if item:
                 item.setText(2, id_value)
                 item.setText(3, value)
+                item.setTextAlignment(3, Qt.AlignHCenter)
 
     def initTreeWidgetItems(self):
         if self.mode == "special_relation":
