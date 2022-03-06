@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import List, Union, Dict
 
 from PyQt5.QtSql import QSqlQuery
@@ -25,8 +24,6 @@ class WorkModeInMemoryRepository(WorkModeRepository):
         value_dict = {
             "user_id": record.indexOf("user_id"),
             "name": record.indexOf("name"),
-            "exp_start_datetime": record.indexOf("exp_start_datetime"),
-            "exp_end_datetime": record.indexOf("exp_end_datetime"),
             "work_mode": record.indexOf("work_mode")
         }
         return record, value_dict
@@ -40,9 +37,7 @@ class WorkModeInMemoryRepository(WorkModeRepository):
             "status": self.query.value(record.indexOf("status")),
             "weekday_work_count": self.query.value(record.indexOf("weekday_work_count")),
             "holiday_work_count": self.query.value(record.indexOf("holiday_work_count")),
-            "work_mode": self.query.value(record.indexOf("work_mode")),
-            "exp_start_datetime": self.query.value(record.indexOf("exp_start_datetime")),
-            "exp_end_datetime": self.query.value(record.indexOf("exp_end_datetime")),
+            "work_mode": self.query.value(record.indexOf("work_mode"))
         }
         return user_id, data
 
@@ -52,8 +47,6 @@ class WorkModeInMemoryRepository(WorkModeRepository):
             CREATE TABLE if NOT EXISTS workmode (
                 workmode_id INTEGER primary key autoincrement,
                 user_id INTEGER,
-                exp_start_datetime DATETIME DEFAULT NULL,
-                exp_end_datetime DATETIME DEFAULT NULL,
                 work_mode VARCHAR (30) DEFAULT 'on' CHECK ( work_mode IN ('on', 'off')),
                 foreign key (user_id) REFERENCES user(id) ON DELETE CASCADE
             )
@@ -127,40 +120,6 @@ class WorkModeInMemoryRepository(WorkModeRepository):
 
         return item
 
-    def update_exp_datetime(self, user_id: int, start: datetime, end: datetime):
-        self.query.prepare(
-            f"""
-            UPDATE workmode 
-            SET (exp_start_datetime, exp_end_datetime) = (:exp_start_datetime, :exp_end_datetime) 
-            WHERE user_id='{user_id}';
-            """
-        )
-        self.query.bindValue(":exp_start_datetime", start)
-        self.query.bindValue(":exp_end_datetime", end)
-
-        self.query.exec_()
-
-    def get_exp_datetime_exists_users(self) -> Union[List[Dict], None]:
-        self.query.exec_(
-            """
-            SELECT user_id, name, exp_start_datetime, exp_end_datetime FROM workmode w 
-            INNER JOIN user u on w.user_id = u.id 
-            WHERE exp_start_datetime NOT NULL AND exp_end_datetime NOT NULL;
-            """
-        )
-        record, exp_query_dict = self.workmode_query_record(_query=self.query)
-
-        result = []
-        while self.query.next():
-            item = {
-                "user_id": self.query.value(exp_query_dict["user_id"]),
-                "name": self.query.value(exp_query_dict["name"]),
-                "exp_start_datetime": self.query.value(exp_query_dict["exp_start_datetime"]),
-                "exp_end_datetime": self.query.value(exp_query_dict["exp_end_datetime"])
-            }
-            result.append(item)
-        return result
-
     def get_work_mode_users(self) -> Union[Dict, None]:
         self.query.exec_(
             """
@@ -176,7 +135,7 @@ class WorkModeInMemoryRepository(WorkModeRepository):
         return result
 
     def drop_term_count_related_columns(self, term_count: int) -> bool:
-        columns_list = ['workmode_id', 'user_id', 'exp_start_datetime', 'exp_end_datetime', 'work_mode']
+        columns_list = ['workmode_id', 'user_id', 'work_mode']
 
         self.query.exec_(f"""ALTER TABLE workmode RENAME TO workmode_old;""")
         self.query.exec_(
@@ -184,8 +143,6 @@ class WorkModeInMemoryRepository(WorkModeRepository):
             CREATE TABLE workmode (
                 workmode_id INTEGER primary key autoincrement,
                 user_id INTEGER,
-                exp_start_datetime DATETIME DEFAULT NULL,
-                exp_end_datetime DATETIME DEFAULT NULL,
                 work_mode VARCHAR (30) DEFAULT 'on' CHECK ( work_mode IN ('on', 'off')),
                 foreign key (user_id) REFERENCES user(id) ON DELETE CASCADE
             );"""

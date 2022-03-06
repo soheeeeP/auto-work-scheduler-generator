@@ -35,6 +35,10 @@ class DateTimeExceptionRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def update_exp_datetime_timeline_by_user_id(self, user_id: int, start_dt: datetime, end_dt: datetime) -> bool:
+        pass
+
+    @abstractmethod
     def get_all_exp_datetime(self) -> Union[List[Dict], None]:
         pass
 

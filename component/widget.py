@@ -895,7 +895,7 @@ class OptionWidget(QWidget):
 
             exp_data = self.db.user_repository.get_all_exp_relation()
         else:
-            exp_data = self.db.work_mode_repository.get_exp_datetime_exists_users()
+            exp_data = self.db.exp_datetime_repository.get_all_exp_datetime()
 
         self.selected_box = DropTreeWidget.tree_widget(mode, exp_data, header_labels)
 
@@ -1024,28 +1024,25 @@ class OptionWidget(QWidget):
         if message_box is False:
             return
 
-        # TODO: exp_datetime 수정시, workmode 수정
         if self.mode == "outside":
             for d in _data:
                 if d["출발일"] > d["복귀일"]:
                     print("잘못된 날짜 설정 옵션입니다. 저장할 수 없습니다.")
                     continue
-
-                self.db.work_mode_repository.update_exp_datetime(
+                self.db.exp_datetime_repository.update_exp_datetime_timeline_by_user_id(
                     user_id=d["id"],
-                    start=d["출발일"] + " " + "00:00",
-                    end=d["복귀일"] + " " + "23:59"
+                    start_dt=d["출발일"] + " " + "00:00",
+                    end_dt=d["복귀일"] + " " + "23:59"
                 )
         elif self.mode == "exception":
             for d in _data:
                 if d["시작시간"] > d["종료시간"]:
                     print("잘못된 시간 설정 옵션입니다. 저장할 수 없습니다.")
                     continue
-
-                self.db.work_mode_repository.update_exp_datetime(
+                self.db.exp_datetime_repository.update_exp_datetime_timeline_by_user_id(
                     user_id=d["id"],
-                    start=d["일자"] + " " + d["시작시간"],
-                    end=d["일자"] + " " + d["종료시간"]
+                    start_dt=d["일자"] + " " + d["시작시간"],
+                    end_dt=d["일자"] + " " + d["종료시간"]
                 )
 
         self.close_widget()
@@ -1128,7 +1125,8 @@ class DropTreeWidget(QTreeWidget):
         self.added_data = None
 
         self.setTreeWidgetHeader(header_labels)
-        self.initTreeWidgetItems()
+        if data:
+            self.initTreeWidgetItems()
 
     def init_special_relation_tree(self):
         for v in self.raw_data:
@@ -1144,80 +1142,112 @@ class DropTreeWidget(QTreeWidget):
         return True
 
     def init_outside_relation_tree(self):
-        for v in self.raw_data:
-            item = QTreeWidgetItem()
-            item.setText(0, str(v["user_id"]))
-            item.setText(1, v["name"])
-            item.setTextAlignment(1, Qt.AlignHCenter)
+        ymd_format = "yyyy/MM/dd"
+        today = QDate.currentDate().toString(ymd_format + " 00:00")
 
-            today = QDate.currentDate()
+        data = self.create_user_exp_datetime_dict(self.raw_data)
+        for user_id, v in data.items():
+            widget_datetime_list = []
+            prev_start_dt, prev_end_dt = '0000/00/00 00:00', '0000/00/00 00:00'
+            exp_datetime_list = sorted(v["datetime"], key=lambda x: (x["start"], x["end"]))
 
-            date_start = QDate.fromString(v["exp_start_datetime"].split(' ')[0], "yyyy/MM/dd")
-            date_end = QDate.fromString(v["exp_end_datetime"].split(' ')[0], "yyyy/MM/dd")
+            for datetime in exp_datetime_list:
+                s_dt, e_dt = datetime["start"], datetime["end"]
 
-            if today <= date_start:
-                widget_s_date, widget_e_date = date_start, date_end
-            elif date_start < today < date_end:
-                widget_s_date, widget_e_date = today, date_end
-            elif today == date_end:
-                widget_s_date, widget_e_date = today, today
-            else:
-                continue
+                if e_dt < today:
+                    continue
 
-            start_date = DateEdit.set_date_edit_widget(date=widget_s_date, date_format="yyyy/MM/dd")
-            end_date = DateEdit.set_date_edit_widget(date=widget_e_date, date_format="yyyy/MM/dd")
+                if prev_end_dt < s_dt:
+                    widget_datetime_list.append({"start": max(today, s_dt), "end": e_dt})
+                    prev_start_dt, prev_end_dt = max(today, s_dt), e_dt
+                elif s_dt <= prev_end_dt <= e_dt:
+                    widget_datetime_list[-1]["end"] = e_dt
+                    prev_start_dt, prev_end_dt = widget_datetime_list[-1]["start"], e_dt
 
-            start_date.dateChanged.connect(lambda: start_date.reset_start_date(start_date))
-            end_date.dateChanged.connect(lambda: end_date.reset_end_date(end_date))
+            for date in widget_datetime_list:
+                item = QTreeWidgetItem()
+                item.setText(0, str(user_id))
+                item.setText(1, v["user_name"])
+                item.setTextAlignment(1, Qt.AlignHCenter)
 
-            self.addTopLevelItem(item)
-            self.setItemWidget(item, 2, start_date)
-            self.setItemWidget(item, 3, end_date)
+                start_date = DateEdit.set_date_edit_widget(date=date["start"].split(" ")[0], date_format=ymd_format)
+                end_date = DateEdit.set_date_edit_widget(date=date["end"].split(" ")[0], date_format=ymd_format)
+
+                start_date.dateChanged.connect(lambda: start_date.reset_start_date(start_date))
+                end_date.dateChanged.connect(lambda: end_date.reset_end_date(end_date))
+
+                self.addTopLevelItem(item)
+                self.setItemWidget(item, 2, start_date)
+                self.setItemWidget(item, 3, end_date)
 
         return True
 
     def init_exception_relation_tree(self):
-        for v in self.raw_data:
-            item = QTreeWidgetItem()
-            item.setText(0, str(v["user_id"]))
-            item.setText(1, v["name"])
-            item.setTextAlignment(1, Qt.AlignHCenter)
+        ymd_format, hm_format = "yyyy/MM/dd", "hh:mm"
+        today = QDate.currentDate().toString(ymd_format)
 
-            today = QDate.currentDate()
+        data = self.create_user_exp_datetime_dict(self.raw_data)
+        for user_id, v in data.items():
+            widget_datetime_dict = {}
+            exp_datetime_list = sorted(v["datetime"], key=lambda x: (x["start"], x["end"]))
 
-            exp_start_dt = v["exp_start_datetime"].split(' ')
-            date_start = QDate.fromString(exp_start_dt[0], "yyyy/MM/dd")
-            time_start = QTime.fromString(exp_start_dt[1], "hh:mm")
+            for datetime in exp_datetime_list:
+                s_dt, e_dt = datetime["start"].split(" "), datetime["end"].split(" ")
+                s_date, s_time = s_dt[0], s_dt[1]
+                e_date, e_time = e_dt[0], e_dt[1]
 
-            exp_end_dt = v["exp_end_datetime"].split(' ')
-            date_end = QDate.fromString(exp_end_dt[0], "yyyy/MM/dd")
-            time_end = QTime.fromString(exp_end_dt[1], "hh:mm")
+                if today <= s_date:
+                    widget_date = s_date
+                    widget_s_time, widget_e_time = s_time, "23:59"
+                elif s_date < today < e_date:
+                    widget_date = today
+                    widget_s_time, widget_e_time = "00:00", "23:59"
+                elif today == e_date:
+                    widget_date = e_date
+                    widget_s_time, widget_e_time = "00:00", e_time
+                else:
+                    continue
 
-            if today <= date_start:
-                widget_date = date_start
-                widget_s_time, widget_e_time = time_start, QTime(23, 59, 59)
-            elif date_start < today < date_end:
-                widget_date = today
-                widget_s_time, widget_e_time = QTime(0, 00, 00), QTime(23, 59, 59)
-            elif today == date_end:
-                widget_date = date_end
-                widget_s_time, widget_e_time = QTime(0, 00, 00), time_end
-            else:
-                continue
+                if widget_date in widget_datetime_dict:
+                    widget_datetime_dict[widget_date] = {
+                        "start": min(widget_s_time, widget_datetime_dict[widget_date]["start"]),
+                        "end": max(widget_e_time, widget_datetime_dict[widget_date]["end"])
+                    }
+                else:
+                    widget_datetime_dict[widget_date] = {
+                        "start": widget_s_time,
+                        "end": widget_e_time
+                    }
+            for date_key, time_value in widget_datetime_dict.items():
+                item = QTreeWidgetItem()
+                item.setText(0, str(user_id))
+                item.setText(1, v["user_name"])
+                item.setTextAlignment(1, Qt.AlignHCenter)
 
-            date = DateEdit.set_date_edit_widget(date=widget_date, date_format="yyyy/MM/dd")
-            start_time = TimeEdit.set_time_edit_widget(time=widget_s_time, time_format="hh:mm")
-            end_time = TimeEdit.set_time_edit_widget(time=widget_e_time, time_format="hh:mm")
+                date = DateEdit.set_date_edit_widget(date=date_key, date_format=ymd_format)
+                start_time = TimeEdit.set_time_edit_widget(time=time_value["start"], time_format=hm_format)
+                end_time = TimeEdit.set_time_edit_widget(time=time_value["end"], time_format=hm_format)
 
-            start_time.timeChanged.connect(lambda: start_time.reset_start_time(start_time))
-            end_time.timeChanged.connect(lambda: end_time.reset_start_time(end_time))
+                start_time.timeChanged.connect(lambda: start_time.reset_start_time(start_time))
+                end_time.timeChanged.connect(lambda: end_time.reset_start_time(end_time))
 
-            self.addTopLevelItem(item)
-            self.setItemWidget(item, 2, date)
-            self.setItemWidget(item, 3, start_time)
-            self.setItemWidget(item, 4, end_time)
+                self.addTopLevelItem(item)
+                self.setItemWidget(item, 2, date)
+                self.setItemWidget(item, 3, start_time)
+                self.setItemWidget(item, 4, end_time)
 
         return True
+
+    @staticmethod
+    def create_user_exp_datetime_dict(data):
+        exp_dict = {x["user_id"]: {"user_name": '', "datetime": []} for x in data}
+        for d in data:
+            key = d["user_id"]
+            if exp_dict[key]["user_name"] == '':
+                exp_dict[key]["user_name"] = d["user_name"]
+            exp_dict[key]["datetime"].append({"start": d["start"], "end": d["end"]})
+
+        return exp_dict
 
     def setDropMode(self):
         self.setDragDropMode(QAbstractItemView.DropOnly)

@@ -71,6 +71,36 @@ class DateTimeExceptionInMemoryRepository(DateTimeExceptionRepository):
 
         return self.query.value(0) if self.query.first() else None
 
+    def update_exp_datetime_timeline_by_user_id(self, user_id: int, start_dt: datetime, end_dt: datetime):
+        self.query.exec_(f"""SELECT start_datetime as start, end_datetime as end FROM exp_datetime WHERE user_id='{user_id}';""")
+
+        timeline = []
+        while self.query.next():
+            timeline.append({"start": self.query.value(0), "end": self.query.value(1)})
+        timeline.append({"start": start_dt, "end": end_dt})
+        timeline.sort(key=lambda x: (x["start"], x["end"]))
+
+        prev_start_dt, prev_end_dt = '0000/00/00 00:00', '0000/00/00 00:00'
+        new_timeline = []
+        for t in timeline:
+            s_dt, e_dt = t["start"], t["end"]
+
+            if prev_end_dt < s_dt:
+                new_timeline.append({"start": s_dt, "end": e_dt})
+                prev_start_dt, prev_end_dt = s_dt, e_dt
+            elif s_dt <= prev_end_dt <= e_dt:
+                new_timeline[-1]["end"] = e_dt
+                prev_start_dt, prev_end_dt = new_timeline[-1]["start"], e_dt
+            else:
+                continue
+
+        self.delete_exp_datetime_by_user_id(user_id=user_id)
+        self.query.exec_(
+            f"""INSERT INTO exp_datetime (user_id, start_datetime, end_datetime) VALUES %s;"""
+            % str([(2, x["start"], x["end"]) for x in new_timeline]).strip('[]')
+        )
+        return True
+
     def get_all_exp_datetime(self) -> Union[List[Dict], None]:
         self.query.exec_(
             """

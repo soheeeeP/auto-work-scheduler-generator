@@ -50,14 +50,6 @@ class WorkModeRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def update_exp_datetime(self, user_id: int, start: datetime, end: datetime):
-        pass
-
-    @abstractmethod
-    def get_exp_datetime_exists_users(self)-> Union[List[Dict], None]:
-        pass
-
-    @abstractmethod
     def get_work_mode_users(self) -> Union[Dict, None]:
         pass
 
