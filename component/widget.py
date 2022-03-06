@@ -968,25 +968,23 @@ class OptionWidget(QWidget):
 
         self.selected_box.addTopLevelItem(tree_widget_item)
 
-        departure = QDateEdit()
-        departure.setDate(QDate.currentDate())
-        self.selected_box.setItemWidget(tree_widget_item, 2, departure)
-
+        departure = DateEdit.set_date_edit_widget(QDate.currentDate(), "yyyy/MM/dd")
         if self.mode == 'outside':
-            arrival = QDateEdit()
-            arrival.setDate(QDate.currentDate().addDays(7))
+            arrival = DateEdit().set_date_edit_widget(QDate.currentDate().addDays(7), "yyyy/MM/dd")
+
+            departure.dateChanged.connect(lambda: departure.reset_start_date(arrival))
+            arrival.dateChanged.connect(lambda: arrival.reset_end_date(departure))
+
+            self.selected_box.setItemWidget(tree_widget_item, 2, departure)
             self.selected_box.setItemWidget(tree_widget_item, 3, arrival)
         elif self.mode == 'exception':
-            start_time = QTimeEdit()
-            start_time.setTime(QTime.currentTime())
-            start_time.setTimeRange(QTime(0, 00, 00), QTime(23, 59, 59))
-            start_time.setDisplayFormat('hh:mm')
+            start_time = TimeEdit.set_time_edit_widget(QTime().currentTime(), "hh:mm")
+            end_time = TimeEdit.set_time_edit_widget(QTime.currentTime().addSecs(60 * 60 * (24 / self.term_count)), "hh:mm")
 
-            end_time = QTimeEdit()
-            end_time.setTime(QTime.currentTime().addSecs(60 * 60 * (24 / self.term_count)))
-            end_time.setTimeRange(QTime(0, 00, 00), QTime(23, 59, 59))
-            end_time.setDisplayFormat('hh:mm')
+            start_time.timeChanged.connect(lambda: start_time.reset_start_time(end_time))
+            end_time.timeChanged.connect(lambda: end_time.reset_end_time(start_time))
 
+            self.selected_box.setItemWidget(tree_widget_item, 2, departure)
             self.selected_box.setItemWidget(tree_widget_item, 3, start_time)
             self.selected_box.setItemWidget(tree_widget_item, 4, end_time)
 
@@ -1176,17 +1174,29 @@ class DropTreeWidget(QTreeWidget):
                 item.setText(0, str(v["user_id"]))
                 item.setText(1, v["name"])
                 item.setTextAlignment(1, Qt.AlignHCenter)
+
+                today = QDate.currentDate()
+
+                date_start = QDate.fromString(v["exp_start_datetime"].split(' ')[0], "yyyy/MM/dd")
+                date_end = QDate.fromString(v["exp_end_datetime"].split(' ')[0], "yyyy/MM/dd")
+
+                if today <= date_start:
+                    widget_s_date, widget_e_date = date_start, date_end
+                elif date_start < today < date_end:
+                    widget_s_date, widget_e_date = today, date_end
+                elif today == date_end:
+                    widget_s_date, widget_e_date = today, today
+                else:
+                    continue
+
+                start_date = DateEdit.set_date_edit_widget(date=widget_s_date, date_format="yyyy/MM/dd")
+                end_date = DateEdit.set_date_edit_widget(date=widget_e_date, date_format="yyyy/MM/dd")
+
+                start_date.dateChanged.connect(lambda: start_date.reset_start_date(start_date))
+                end_date.dateChanged.connect(lambda: end_date.reset_end_date(end_date))
+
                 self.addTopLevelItem(item)
-
-                start_date = QDateEdit()
-                start_date.setDisplayFormat('yyyy/MM/dd')
-                start_date.setDate(QDate.fromString(v["exp_start_datetime"].split(' ')[0], 'yyyy/MM/dd'))
-
                 self.setItemWidget(item, 2, start_date)
-
-                end_date = QDateEdit()
-                end_date.setDisplayFormat('yyyy/MM/dd')
-                end_date.setDate(QDate.fromString(v["exp_end_datetime"].split(' ')[0], 'yyyy/MM/dd'))
                 self.setItemWidget(item, 3, end_date)
 
         elif self.mode == "exception":
@@ -1195,20 +1205,39 @@ class DropTreeWidget(QTreeWidget):
                 item.setText(0, str(v["user_id"]))
                 item.setText(1, v["name"])
                 item.setTextAlignment(1, Qt.AlignHCenter)
+
+                today = QDate.currentDate()
+
+                exp_start_dt = v["exp_start_datetime"].split(' ')
+                date_start = QDate.fromString(exp_start_dt[0], "yyyy/MM/dd")
+                time_start = QTime.fromString(exp_start_dt[1], "hh:mm")
+
+                exp_end_dt = v["exp_end_datetime"].split(' ')
+                date_end = QDate.fromString(exp_end_dt[0], "yyyy/MM/dd")
+                time_end = QTime.fromString(exp_end_dt[1], "hh:mm")
+
+                if today <= date_start:
+                    widget_date = date_start
+                    widget_s_time, widget_e_time = time_start, QTime(23, 59, 59)
+                elif date_start < today < date_end:
+                    widget_date = today
+                    widget_s_time, widget_e_time = QTime(0, 00, 00), QTime(23, 59, 59)
+                elif today == date_end:
+                    widget_date = date_end
+                    widget_s_time, widget_e_time = QTime(0, 00, 00), time_end
+                else:
+                    continue
+
+                date = DateEdit.set_date_edit_widget(date=widget_date, date_format="yyyy/MM/dd")
+                start_time = TimeEdit.set_time_edit_widget(time=widget_s_time, time_format="hh:mm")
+                end_time = TimeEdit.set_time_edit_widget(time=widget_e_time, time_format="hh:mm")
+
+                start_time.timeChanged.connect(lambda: start_time.reset_start_time(start_time))
+                end_time.timeChanged.connect(lambda: end_time.reset_start_time(end_time))
+
                 self.addTopLevelItem(item)
-
-                _start_datetime = v["exp_start_datetime"].split()
-                _end_datetime = v["exp_end_datetime"].split()
-                date = QDateEdit()
-                date.setDate(QDate.fromString(_start_datetime[0], 'yyyy/MM/dd'))
                 self.setItemWidget(item, 2, date)
-
-                start_time = QTimeEdit()
-                start_time.setTime(QTime.fromString(_start_datetime[1], 'hh:mm'))
                 self.setItemWidget(item, 3, start_time)
-
-                end_time = QTimeEdit()
-                end_time.setTime(QTime.fromString(_end_datetime[1], 'hh:mm'))
                 self.setItemWidget(item, 4, end_time)
 
     def setTreeWidgetHeader(self, labels):
@@ -1356,3 +1385,76 @@ class OnOffSwitch(QCheckBox):
     def enterEvent(self, event):
         self.setCursor(Qt.PointingHandCursor)
         super().enterEvent(event)
+
+
+class DateEdit(QDateEdit):
+    def __init__(self, parent=None):
+        super(DateEdit, self).__init__(parent=parent)
+
+    def __call__(self, date: QDate, date_format: str):
+        self.setDate(date)
+        self.setDisplayFormat(date_format)
+        self.dateChanged.connect(self.set_date_range)
+
+    def resetDate(self, date: QDate):
+        self.setDate(date)
+
+    def set_date_range(self):
+        if self.date() >= QDate.currentDate():
+            return
+
+        message_box = setWarningMessageBox(self, "오늘 일자보다 작게 설정할 수 없습니다.")
+        self.resetDate(QDate.currentDate())
+        return
+
+    def reset_start_date(self, end_d: QDateEdit):
+        start, end = self.date(), end_d.date()
+        if start.daysTo(end) >= 0:
+            return
+
+        self.resetDate(end.addDays(-1))
+        return setWarningMessageBox(self, "도착일을 출발일보다 작게 설정할 수 없습니다.")
+
+    def reset_end_date(self, start_d: QDateEdit):
+        start, end = start_d.date(), self.date()
+        if start.daysTo(end) >= 0:
+            return
+
+        self.resetDate(start.addDays(1))
+        return setWarningMessageBox(self, "도착일을 출발일보다 작게 설정할 수 없습니다.")
+
+    @classmethod
+    def set_date_edit_widget(cls, date, date_format: str):
+        _date = QDate.fromString(date, date_format) if isinstance(date, str) else date
+        date_edit = cls()
+        date_edit(_date, date_format)
+
+        return date_edit
+
+
+class TimeEdit(QTimeEdit):
+    def __init__(self, parent=None):
+        super(TimeEdit, self).__init__(parent)
+
+    def __call__(self, time: QTime, time_format: str):
+
+        self.setTime(time)
+        self.setDisplayFormat(time_format)
+        self.setTimeRange(QTime(0, 00, 00), QTime(23, 59, 59))
+
+    def reset_start_time(self, end_t: QTimeEdit):
+        start, end = self.time(), end_t.time()
+        print(start)
+        print(end)
+
+    def reset_end_time(self, start_t: QTimeEdit):
+        start, end = start_t.time(), self.time()
+        pass
+
+    @classmethod
+    def set_time_edit_widget(cls, time, time_format: str):
+        _time = QTime.fromString(time, time_format) if isinstance(time, str) else time
+        time_edit = cls()
+        time_edit(_time, time_format)
+
+        return time_edit
