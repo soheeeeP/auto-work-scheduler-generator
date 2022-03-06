@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QAction, QPushButton, Q
     QTableWidget, QTableWidgetItem, QAbstractItemView, QMessageBox
 
 from component.window import MenuWindow
+from component.message import *
 from component.dialog import LogInDialog
 from settings import login
 
@@ -271,8 +272,7 @@ class WindowApplication(QMainWindow):
 
         if day_diff < 0:
             self.start_date.setDate(end.addDays(-1))
-            QMessageBox.warning(self, "QMessageBox", "종료일을 시작일보다 작게 설정할 수 없습니다.")
-            return False
+            return setWarningMessageBox(self, "종료일을 시작일보다 작게 설정할 수 없습니다.")
 
         self.reset_date_range(start, end)
         self.reset_holiday_list(
@@ -288,8 +288,7 @@ class WindowApplication(QMainWindow):
 
         if day_diff < 0:
             self.end_date.setDate(start.addDays(1))
-            QMessageBox.warning(self, "QMessageBox", "종료일을 시작일보다 작게 설정할 수 없습니다.")
-            return False
+            return setWarningMessageBox(self, "종료일을 시작일보다 작게 설정할 수 없습니다.")
 
         self.reset_date_range(start, end)
         self.reset_holiday_list(
@@ -333,11 +332,9 @@ class WindowApplication(QMainWindow):
 
         days_cnt = start.daysTo(end)
         if days_cnt == 0:
-            QMessageBox.warning(self, "QMessageBox", "시작일과 종료일을 같게 설정할 수 없습니다.")
-            return False
+            return setWarningMessageBox(self, "시작일과 종료일을 같게 설정할 수 없습니다.")
         elif days_cnt <= 0:
-            QMessageBox.warning(self, "QMessageBox", "종료일을 시작일보다 작게 설정할 수 없습니다.")
-            return False
+            return setWarningMessageBox(self, "종료일을 시작일보다 작게 설정할 수 없습니다.")
 
         days_on_off = [1 for i in range(days_cnt + 1)]
 

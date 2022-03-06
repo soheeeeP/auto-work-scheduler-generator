@@ -8,7 +8,12 @@ def setAboutMessageBox(window, message):
 
 def setCriticalMessageBox(window, message):
     message_box = QMessageBox.critical(window, "QMessageBox", message, QMessageBox.Close)
-    return
+    return False
+
+
+def setWarningMessageBox(window, message):
+    message_box = QMessageBox.warning(window, "QMessageBox", message)
+    return False
 
 
 def setQuestionMessageBox(window, message) -> bool:
