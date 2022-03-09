@@ -1317,7 +1317,8 @@ class DropTreeWidget(QTreeWidget):
     def resetTreeWidgetItems(self, data):
         self.raw_data = data
         self.clear()
-        self.initTreeWidgetItems()
+        if data:
+            self.initTreeWidgetItems()
 
     def setTreeWidgetHeader(self, labels):
         self.setHeaderLabels(labels)
