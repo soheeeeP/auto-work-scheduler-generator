@@ -911,8 +911,7 @@ class OptionWidget(QWidget):
             admin.exec_()
             if admin.access_approval is False:
                 return False
-
-            exp_data = self.db.user_repository.get_all_exp_relation()
+            exp_data = self.db.exp_relation_repository.get_all_exp_relation()
         else:
             self.db.exp_datetime_repository.update_exp_datetime_timeline_all_user()
             exp_data = self.db.exp_datetime_repository.get_all_exp_datetime()
@@ -1086,11 +1085,9 @@ class OptionWidget(QWidget):
             return
 
         for d in _data:
-            self.db.user_repository.insert_exp_relation(
-                user_1_id=int(d["id1"]),
-                user_1_name=d["사용자1"],
-                user_2_id=int(d["id2"]),
-                user_2_name=d["사용자2"]
+            self.db.exp_relation_repository.insert_exp_relation_by_id(
+                user1_id=int(d["id1"]),
+                user2_id=int(d["id2"])
             )
 
         self.close_widget()
@@ -1160,10 +1157,10 @@ class DropTreeWidget(QTreeWidget):
     def init_special_relation_tree(self):
         for v in self.raw_data:
             item = QTreeWidgetItem()
-            item.setText(0, str(v["user_1_id"]))
-            item.setText(1, v["user_1_name"])
-            item.setText(2, str(v["user_2_id"]))
-            item.setText(3, v["user_2_name"])
+            item.setText(0, str(v["user1_id"]))
+            item.setText(1, v["user1_name"])
+            item.setText(2, str(v["user2_id"]))
+            item.setText(3, v["user2_name"])
             item.setTextAlignment(1, Qt.AlignHCenter)
             item.setTextAlignment(3, Qt.AlignHCenter)
             self.addTopLevelItem(item)
