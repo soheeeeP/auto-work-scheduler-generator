@@ -914,6 +914,7 @@ class OptionWidget(QWidget):
 
             exp_data = self.db.user_repository.get_all_exp_relation()
         else:
+            self.db.exp_datetime_repository.update_exp_datetime_timeline_all_user()
             exp_data = self.db.exp_datetime_repository.get_all_exp_datetime()
 
         self.init_data = exp_data
