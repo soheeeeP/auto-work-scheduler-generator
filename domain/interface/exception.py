@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from datetime import datetime
 from typing import List, Dict, Union
 
 
@@ -27,15 +26,19 @@ class DateTimeExceptionRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def insert_exp_datetime(self, user_id: int, start_dt: datetime, end_dt: datetime) -> Union[int, None]:
+    def insert_exp_datetime(self, user_id: int, start_dt: str, end_dt: str) -> Union[int, None]:
         pass
 
     @abstractmethod
-    def update_exp_datetime(self, exp_id: int, start_dt: datetime, end_dt: datetime) -> Union[int, None]:
+    def update_exp_datetime(self, exp_id: int, start_dt: str, end_dt: str) -> Union[int, None]:
         pass
 
     @abstractmethod
-    def update_exp_datetime_timeline_by_user_id(self, user_id: int, start_dt: datetime, end_dt: datetime) -> bool:
+    def update_exp_datetime_timeline_by_user_id(self, user_id: int, start_dt: str, end_dt: str) -> bool:
+        pass
+
+    @abstractmethod
+    def update_exp_datetime_timeline_all_user(self) -> bool:
         pass
 
     @abstractmethod
