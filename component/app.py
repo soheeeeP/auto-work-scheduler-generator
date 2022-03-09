@@ -10,9 +10,12 @@ from component.dialog import LogInDialog
 from settings import login
 
 from scheduler import AdjustedWorkSchedulerGenerator
+from db import database
 
 
 class WindowApplication(QMainWindow):
+    db = database
+
     def __init__(self):
         super().__init__()
 
@@ -323,6 +326,8 @@ class WindowApplication(QMainWindow):
                 self._holiday_list.setItemWidget(item, holiday)
 
     def create_schedule(self):
+        self.db.exp_datetime_repository.update_exp_datetime_timeline_all_user()
+
         ymd_format = 'yyyy/MM/dd'
 
         start = self.start_date.date()
