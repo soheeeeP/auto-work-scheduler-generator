@@ -4,13 +4,13 @@ from domain.interface.config import ConfigRepository
 from domain.interface.user import UserRepository
 from domain.interface.workmode import WorkModeRepository
 from domain.interface.schedule import ScheduleRepository
-from domain.interface.exception import DateTimeExceptionRepository
+from domain.interface.exception import DateTimeExceptionRepository, RelationExceptionRepository
 
 from domain.repository.config import ConfigInMemoryRepository
 from domain.repository.schedule import ScheduleInMemoryRepository
 from domain.repository.user import UserInMemoryRepository
 from domain.repository.workmode import WorkModeInMemoryRepository
-from domain.repository.exception import DateTimeExceptionInMemoryRepository
+from domain.repository.exception import DateTimeExceptionInMemoryRepository, RelationExceptionInMemoryRepository
 
 
 class DataBase(object):
@@ -24,6 +24,7 @@ class DataBase(object):
         self._work_mode_repository = None
         self._schedule_repository = None
         self._exp_datetime_repository = None
+        self._exp_relation_repository = None
 
     def __del__(self):
         if self._db.isOpen():
@@ -88,6 +89,14 @@ class DataBase(object):
     def exp_datetime_repository(self, value):
         self._exp_datetime_repository = value
 
+    @property
+    def exp_relation_repository(self):
+        return self._exp_relation_repository
+
+    @exp_relation_repository.setter
+    def exp_relation_repository(self, value):
+        self._exp_relation_repository = value
+
     def _terminate_db_connection(self):
         self.db.close()
         self.db.removeDatabase(self.db_name)
@@ -98,7 +107,8 @@ class DataBase(object):
             user_repository: UserRepository,
             work_mode_repository: WorkModeRepository,
             schedule_repository: ScheduleRepository,
-            exp_datetime_repository: DateTimeExceptionRepository
+            exp_datetime_repository: DateTimeExceptionRepository,
+            exp_relation_repository: RelationExceptionRepository
     ):
         self.config_repository = config_repository
         self.config_repository.query = self.query
@@ -115,13 +125,16 @@ class DataBase(object):
         self.exp_datetime_repository = exp_datetime_repository
         self.exp_datetime_repository.query = self.query
 
+        self.exp_relation_repository = exp_relation_repository
+        self.exp_relation_repository.query = self.query
+
     def create_db_tables(self):
         self.config_repository.create_config_table()
         term_count, worker_per_term, assistant_mode = self.config_repository.get_config()
 
         self.user_repository.create_default_user_table()
-        self.user_repository.create_exp_relation_table()
         self.exp_datetime_repository.create_exp_datetime_table()
+        self.exp_relation_repository.create_exp_relation_table()
 
         self.work_mode_repository.create_work_mode_table(term_count=term_count)
         self.schedule_repository.create_schedule_table()
@@ -135,6 +148,7 @@ database.connect_in_memory_repositories(
         user_repository=UserInMemoryRepository(),
         work_mode_repository=WorkModeInMemoryRepository(),
         schedule_repository=ScheduleInMemoryRepository(),
-        exp_datetime_repository=DateTimeExceptionInMemoryRepository()
+        exp_datetime_repository=DateTimeExceptionInMemoryRepository(),
+        exp_relation_repository=RelationExceptionInMemoryRepository()
     )
 database.create_db_tables()

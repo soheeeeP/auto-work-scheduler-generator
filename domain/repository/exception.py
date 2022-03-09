@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Dict, Union
 
 from PyQt5.QtSql import QSqlQuery
-from domain.interface.exception import DateTimeExceptionRepository
+from domain.interface.exception import DateTimeExceptionRepository, RelationExceptionRepository
 
 
 class DateTimeExceptionInMemoryRepository(DateTimeExceptionRepository):
@@ -165,3 +165,147 @@ class DateTimeExceptionInMemoryRepository(DateTimeExceptionRepository):
             """
         )
         return self.query.value(0) if self.query.first() else None
+
+
+class RelationExceptionInMemoryRepository(RelationExceptionRepository):
+    @staticmethod
+    def exp_relation_query_record(_query: QSqlQuery):
+        record = _query.record()
+        col_dict = {
+            "id": record.indexOf("id"),
+            "user1_id": record.indexOf("user1_id"),
+            "user1_name": record.indexOf("user1_name"),
+            "user2_id": record.indexOf("user2_id"),
+            "user2_name": record.indexOf("user2_name")
+        }
+
+        return record, col_dict
+
+    def print_from_query(self, col_idx: Dict) -> Dict:
+        print(self.query.value(0))
+        return {
+            "id": self.query.value(col_idx["id"]),
+            "user1_id": self.query.value(col_idx["user1_id"]),
+            "user1_name": self.query.value(col_idx["user1_name"]),
+            "user2_id": self.query.value(col_idx["user2_id"]),
+            "user2_name": self.query.value(col_idx["user2_name"])
+        }
+
+    def create_exp_relation_table(self):
+        self.query.exec_(
+            """
+            CREATE TABLE if NOT EXISTS exp_relation (
+                id INTEGER primary key autoincrement,
+                user1_id INTEGER,
+                user2_id INTEGER,
+                foreign key (user1_id) REFERENCES user(id) ON DELETE CASCADE,
+                foreign key (user2_id) REFERENCES user(id) ON DELETE CASCADE
+            )
+            """
+        )
+        pass
+
+    def insert_exp_relation_by_id(self, user1_id: int, user2_id) -> bool:
+        exists = self.get_exp_relation_by_user_id_set(user1_id=user1_id, user2_id=user2_id)
+        if exists:
+            return False
+
+        self.query.prepare(f"""INSERT INTO exp_relation (user1_id, user2_id) VALUES (:user1_id, :user2_id);""")
+        self.query.bindValue(":user1_id", user1_id)
+        self.query.bindValue(":user2_id", user2_id)
+
+        result = self.query.exec_()
+
+        return result
+
+    def insert_exp_relation_by_name(self, user1_name: str, user2_name: str) -> bool:
+        exists = self.get_exp_relation_by_user_name_set(user1_name=user1_name, user2_name=user2_name)
+        if exists:
+            return False
+
+        result = self.query.exec_(
+            f"""
+            INSERT INTO exp_relation(user1_id, user2_id)
+            SELECT u1.id, u2.id
+            FROM user u1, user u2 WHERE u1.name='{user1_name}' AND u2.name='{user2_name}';
+            """
+        )
+        return result
+
+    def get_exp_relation_by_user_id_set(self, user1_id: int, user2_id: int) -> Union[Dict, None]:
+        self.query.exec_(
+            f"""
+            SELECT e.id as id, e.user1_id as user1_id, u1.name as user1_name, e.user2_id as user2_id, u2.name as user2_name
+            FROM exp_relation e
+            INNER JOIN user u1 on u1.id = e.user1_id INNER JOIN user u2 on u2.id = e.user2_id
+            WHERE u1.id='{user1_id}' AND u2.id='{user2_id}';
+            """
+        )
+        if self.query.first() is False:
+            return None
+
+        record, value = self.exp_relation_query_record(_query=self.query)
+        return self.print_from_query(col_idx=value)
+
+    def get_exp_relation_by_user_name_set(self, user1_name: str, user2_name: str) -> Union[Dict, None]:
+        self.query.exec_(
+            f"""
+            SELECT e.id as id, e.user1_id as user1_id, u1.name as user1_name, e.user2_id as user2_id, u2.name as user2_name
+            FROM exp_relation e
+            INNER JOIN user u1 on u1.id = e.user1_id INNER JOIN user u2 on u2.id = e.user2_id
+            WHERE u1.name='{user1_name}' AND u2.name='{user2_name}';
+            """
+        )
+        if self.query.first() is False:
+            return None
+
+        record, value = self.exp_relation_query_record(_query=self.query)
+        return self.print_from_query(col_idx=value)
+
+    def get_all_exp_relation(self) -> Union[List[Dict], None]:
+        self.query.exec_(
+            f"""
+            SELECT e.id as id, e.user1_id as user1_id, u1.name as user1_name, e.user2_id as user2_id, u2.name as user2_name
+            FROM exp_relation e
+            INNER JOIN user u1 on u1.id = e.user1_id INNER JOIN user u2 on u2.id = e.user2_id;
+            """
+        )
+        if self.query.first() is False:
+            return None
+
+        self.query.previous()
+
+        record, value = self.exp_relation_query_record(_query=self.query)
+        result = []
+        while self.query.next():
+            result.append(self.print_from_query(col_idx=value))
+        return result
+
+    def delete_exp_relation_by_user_id_set(self, user1_id: int, user2_id: int) -> bool:
+        self.query.exec_(f"""DELETE FROM exp_relation WHERE user1_id='{user1_id}' AND user2_id='{user2_id}';""")
+
+        del_rows_cnt = self.query.numRowsAffected()
+        return False if del_rows_cnt == 0 else True
+
+    def delete_exp_relation_by_user_name_set(self, user1_name: int, user2_name: set) -> bool:
+        self.query.exec_(
+            f"""
+            DELETE FROM exp_relation
+            WHERE user1_id IN (
+                    SELECT user1_id
+                    FROM exp_relation e INNER JOIN user u1 on u1.id = e.user1_id WHERE u1.name='{user1_name}'
+                ) AND
+                user2_id IN (
+                    SELECT user2_id
+                    FROM exp_relation e INNER JOIN user u2 on u2.id = e.user2_id WHERE u2.name='{user2_name}'
+                );
+            """
+        )
+        del_rows_cnt = self.query.numRowsAffected()
+        return False if del_rows_cnt == 0 else True
+
+    def delete_all_exp_relation(self) -> bool:
+        self.query.exec_("""DELETE FROM exp_relation;""")
+
+        del_rows_cnt = self.query.numRowsAffected()
+        return False if del_rows_cnt == 0 else True
