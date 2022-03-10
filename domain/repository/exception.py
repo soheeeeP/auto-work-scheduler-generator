@@ -203,7 +203,6 @@ class RelationExceptionInMemoryRepository(RelationExceptionRepository):
             )
             """
         )
-        pass
 
     def insert_exp_relation_by_id(self, user1_id: int, user2_id) -> bool:
         exists = self.get_exp_relation_by_user_id_set(user1_id=user1_id, user2_id=user2_id)
