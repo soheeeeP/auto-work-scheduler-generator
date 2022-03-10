@@ -26,7 +26,7 @@ class ScheduleRepository(metaclass=ABCMeta):
             work_date: date,
             config_term_count: int,
             schedule_term_idx: int
-    ):
+    ) -> bool:
         pass
 
     @abstractmethod
@@ -37,5 +37,5 @@ class ScheduleRepository(metaclass=ABCMeta):
             schedule_term_idx: int,
             prev_worker_id: int,
             new_worker_id: int
-    ):
+    ) -> bool:
         pass
