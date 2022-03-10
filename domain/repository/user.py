@@ -16,6 +16,13 @@ class UserInMemoryRepository(UserRepository):
         }
         return UserData(data)
 
+    def print_users_info_list_from_query(self):
+        result = []
+        while self.query.next():
+            result.append(self.print_user_info_from_query())
+
+        return result
+
     @staticmethod
     def exp_relation_record_from_query(_query: QSqlQuery):
         record = _query.record()
@@ -48,6 +55,8 @@ class UserInMemoryRepository(UserRepository):
         if not self.query.first():
             return None
 
+        self.query.previous()
+
         result = []
         while self.query.next():
             result.append(self.print_user_info_from_query())
@@ -66,30 +75,25 @@ class UserInMemoryRepository(UserRepository):
         self.query.bindValue(":search_name", f'%{name}%')
         self.query.exec_()
 
-        result = []
-        while self.query.next():
-            result.append(self.print_user_info_from_query())
-        return result
+        return self.print_users_info_list_from_query()
 
     def get_users_by_rank(self, rank: str) -> Union[List[UserData], NameError]:
         self.query.exec_(f"""SELECT * FROM user WHERE rank='{rank}';""")
         if not self.query.first():
             raise NameError(f'user whose rank is {rank} does not exist')
 
-        result = []
-        while self.query.next():
-            result.append(self.print_user_info_from_query())
-        return result
+        self.query.previous()
+
+        return self.print_users_info_list_from_query()
 
     def get_users_by_status(self, status: str) -> Union[List[UserData], NameError]:
         self.query.exec_(f"""SELECT * FROM user WHERE status='{status}';""")
         if not self.query.first():
             raise NameError(f'user whose status is {status} does not exist')
 
-        result = []
-        while self.query.next():
-            result.append(self.print_user_info_from_query())
-        return result
+        self.query.previous()
+
+        return self.print_users_info_list_from_query()
 
     def insert_new_user(self, data: UserData) -> int:
         self.query.prepare(
@@ -141,10 +145,7 @@ class UserInMemoryRepository(UserRepository):
         self.query.bindValue(":holiday_work_count", user_data['holiday_work_count'])
         self.query.exec_()
 
-        if not self.query.first():
-            raise ValueError(f'user does not exist')
-
-        return self.query.value(0) or None
+        return self.query.value(0) if self.query.first() else ValueError
 
     def update_user(self, user_id: int, user_data: Dict):
         self.query.prepare(

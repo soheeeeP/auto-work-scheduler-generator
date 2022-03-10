@@ -22,6 +22,10 @@ class UserRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def print_users_info_list_from_query(self):
+        pass
+
+    @abstractmethod
     def create_default_user_table(self):
         pass
 
