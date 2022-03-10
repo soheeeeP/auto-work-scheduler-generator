@@ -21,10 +21,12 @@ class ConfigInMemoryRepository(ConfigRepository):
             """
         )
 
-    def insert_config(self):
-        self.query.exec_(
+    def insert_config(self) -> bool:
+        result = self.query.exec_(
             """INSERT INTO config (term_count, worker_per_term, assistant_mode) VALUES (3, 1, 0)"""
         )
+
+        return result
 
     def get_config(self) -> Tuple[int, int, bool]:
         self.query.exec_("SELECT * FROM config")
