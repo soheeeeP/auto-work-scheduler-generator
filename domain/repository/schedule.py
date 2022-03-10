@@ -27,7 +27,7 @@ class ScheduleInMemoryRepository(ScheduleRepository):
             work_date: date,
             config_term_count: int,
             schedule_term_idx: int
-    ):
+    ) -> bool:
         self.query.prepare(
             """
             INSERT INTO 
@@ -42,7 +42,10 @@ class ScheduleInMemoryRepository(ScheduleRepository):
         self.query.bindValue(":term_idx", schedule_term_idx)
         self.query.bindValue(":start_time", time_section * (schedule_term_idx - 1))
         self.query.bindValue(":end_time", time_section * schedule_term_idx)
-        self.query.exec_()
+
+        result = self.query.exec_()
+
+        return result
 
     def update_schedule(
             self,
@@ -51,8 +54,8 @@ class ScheduleInMemoryRepository(ScheduleRepository):
             schedule_term_idx: int,
             prev_worker_id: int,
             new_worker_id: int
-    ):
-        # TODO: db.transaction() 적용하기
+    ) -> bool:
+
         self.query.prepare(
             """
             UPDATE schedule SET worker_id = (SELECT id FROM user WHERE id=(:new_worker_id) IS NOT NULL)
@@ -67,13 +70,8 @@ class ScheduleInMemoryRepository(ScheduleRepository):
         self.query.bindValue(":day_option", day_option)
         self.query.bindValue(":date", work_date)
         self.query.bindValue(":term_idx", schedule_term_idx)
-        self.query.exec_()
 
-        # TODO: repository단위로 query method 분리하기 (user_repository.update_user_work_count)
-        self.query.prepare(f"""UPDATE user SET work_count = work_count - 1 WHERE id = (:id)""")
-        self.query.bindValue(":id", prev_worker_id)
-        self.query.exec_()
+        result = self.query.exec_()     # TODO: work_count up/down
 
-        self.query.prepare(f"""UPDATE user SET work_count = work_count + 1 WHERE id = (:id)""")
-        self.query.bindValue(":id", new_worker_id)
-        self.query.exec_()
+        return result
+

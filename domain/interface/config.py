@@ -19,7 +19,7 @@ class ConfigRepository(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def insert_config(self):
+    def insert_config(self) -> bool:
         pass
 
     @abstractmethod
