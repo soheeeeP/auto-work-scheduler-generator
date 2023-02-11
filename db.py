@@ -19,12 +19,12 @@ class DataBase(object):
         self.db = db_name
         self.query = QSqlQuery()
 
-        self._config_repository = None
-        self._user_repository = None
-        self._work_mode_repository = None
-        self._schedule_repository = None
-        self._exp_datetime_repository = None
-        self._exp_relation_repository = None
+        self.__config_repository = None
+        self.__user_repository = None
+        self.__work_mode_repository = None
+        self.__schedule_repository = None
+        self.__exp_datetime_repository = None
+        self.__exp_relation_repository = None
 
     def __del__(self):
         if self._db.isOpen():
@@ -51,51 +51,51 @@ class DataBase(object):
 
     @property
     def config_repository(self):
-        return self._config_repository
+        return self.__config_repository
 
     @config_repository.setter
     def config_repository(self, value):
-        self._config_repository = value
+        self.__config_repository = value
 
     @property
     def user_repository(self):
-        return self._user_repository
+        return self.__user_repository
 
     @user_repository.setter
     def user_repository(self, value):
-        self._user_repository = value
+        self.__user_repository = value
 
     @property
     def work_mode_repository(self):
-        return self._work_mode_repository
+        return self.__work_mode_repository
 
     @work_mode_repository.setter
     def work_mode_repository(self, value):
-        self._work_mode_repository = value
+        self.__work_mode_repository = value
 
     @property
     def schedule_repository(self):
-        return self._schedule_repository
+        return self.__schedule_repository
 
     @schedule_repository.setter
     def schedule_repository(self, value):
-        self._schedule_repository = value
+        self.__schedule_repository = value
 
     @property
     def exp_datetime_repository(self):
-        return self._exp_datetime_repository
+        return self.__exp_datetime_repository
 
     @exp_datetime_repository.setter
     def exp_datetime_repository(self, value):
-        self._exp_datetime_repository = value
+        self.__exp_datetime_repository = value
 
     @property
     def exp_relation_repository(self):
-        return self._exp_relation_repository
+        return self.__exp_relation_repository
 
     @exp_relation_repository.setter
     def exp_relation_repository(self, value):
-        self._exp_relation_repository = value
+        self.__exp_relation_repository = value
 
     def _terminate_db_connection(self):
         self.db.close()
@@ -142,6 +142,7 @@ class DataBase(object):
         self.query.exec("""PRAGMA foreign_keys = ON;""")
 
 
+# todo: db name을 .env로 분리
 database = DataBase(db_name='test.db')
 database.connect_in_memory_repositories(
         config_repository=ConfigInMemoryRepository(),

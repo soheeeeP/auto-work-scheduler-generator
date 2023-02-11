@@ -111,6 +111,7 @@ class WorkModeInMemoryRepository(WorkModeRepository):
             "rank": self.query.value(query_dict["rank"]),
             "name": self.query.value(query_dict["name"]),
             "status": self.query.value(query_dict["status"]),
+            # todo: weekday_work_count, holiday_work_count로 수정필요 (KeyError)
             "work_count": self.query.value(query_dict["work_count"])
         }
         for i in range(1, term_count + 1):

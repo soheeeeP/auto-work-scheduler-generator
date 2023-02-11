@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple, Set, Union
 from db import database
 
 
+# todo: Use scheduler as singleton
 class AdjustedWorkSchedulerGenerator:
     db = database
 
@@ -18,6 +19,7 @@ class AdjustedWorkSchedulerGenerator:
         """
         :param base_date: schedule 생성 기준일 (%Y/%m/%d)
         :param days_on_off: 평일/휴일 설정값 list (평일 1, 휴일 0)
+            example)
 
         :var self.term_count: 교대텀 설정값
         :var self.worker_per_term: 근무자 수
@@ -61,6 +63,7 @@ class AdjustedWorkSchedulerGenerator:
         setattr(self, 'queue', q)
 
         queue = getattr(self, 'queue')
+        # 근무자가 1명이고, 사수/부사수를 구분하지 않는 경우
         if self.worker_per_term == 1 or self.assistant_mode is False:
             self.generate_single_mode_worker_table(
                 day_key=day_key,
@@ -70,6 +73,7 @@ class AdjustedWorkSchedulerGenerator:
             )
 
         else:
+            # 사수, 부사수 근무자 queue를 구분
             senior_queue, junior_queue = {}, {}
             pre_senior_queue, pre_junior_queue = {}, {}
             for user_id, value in queue.items():
@@ -83,12 +87,14 @@ class AdjustedWorkSchedulerGenerator:
                 else:
                     pre_junior_queue[user_id] = value
 
+            # 사수(senior)는 한 term당 1명만 편성
             self.generate_single_mode_worker_table(
                 day_key=day_key,
                 queue=senior_queue,
                 pre_queue=pre_senior_queue,
                 worker_per_term=1
             )
+            # 사수(senior)를 편성하고 남는 자리에 부사수(junior)를 편성
             self.generate_single_mode_worker_table(
                 day_key=day_key,
                 queue=junior_queue,
@@ -100,6 +106,13 @@ class AdjustedWorkSchedulerGenerator:
 
     @staticmethod
     def calc_assigned_workers_cnt(table):
+        """
+        table에 이미 저장되어 있는 인원 수를 계산한다.
+        :param
+            table (list[][]): 근무 편성 table
+        :return:
+            x (int): table에 저장되어 있는 인원 수의 합
+        """
         x = 0
         for t in table:
             x += sum(len(_t) for _t in t)
@@ -121,6 +134,20 @@ class AdjustedWorkSchedulerGenerator:
         # return term_count * len(table)
 
     def calc_exp_users_work_term(self, day_key, start_dt, end_dt):
+        """
+        근무 제외 시간이 설정되어 있는 user에 대하여
+        시작 ~ 종료 시간값을 scheduler에서 사용할 term index값의 list로 변환한다.
+
+        :param
+            day_key (str): 평일/휴일 설정값 (week,day, holiday)
+            start_dt (str): 근무 졔외 시작시간 (%Y/%m/%d %H:%M)
+            end_dt (str): 근무 제외 종료시간 (%Y/%m/%d %H:%M)
+        :return:
+            on (boolean)
+                근무 제외 term index를 구성할 수 있는 경우, True
+            exp (list)
+                근무 제외 term index가 저장된 list
+        """
         ymd_format, hm_format = '%Y/%m/%d', '%H:%M'
 
         if start_dt == '' or end_dt == '':
@@ -155,16 +182,28 @@ class AdjustedWorkSchedulerGenerator:
         return True, exp
 
     def workers_queue(self, day_key) -> Tuple[bool, Union[Dict, None], Union[Dict, None]]:
+        """
+        근무자 queue를 생성한다.
+
+        :param
+            day_key (str): 평일/휴일 설정값 (week,day, holiday)
+        :return:
+            workers_queue (dict): 편성해야 할 근무 횟수가 많은 순서대로(=근무편성 우선순위가 높은 인원 순서대로) 정렬된 근무자 queue
+            pre_workers_queue (dict): 편성해야 할 근무 횟수가 많은 순서대로 정렬된 예비 근무자 queue
+        """
         sum_count = 0
+        # 등록된 user 중 제일 근무를 많이 선 인원의 근무 횟수
         max_work_count = self.db.user_repository.get_max_work_count()[day_key]
 
         days_cnt = self.days_on_off.count(self.day_dict[day_key])
         if days_cnt == 0:
             return False, None, None
 
+        # scheduler에서 편성해야 하는 총 근무 횟수의 합
         needed_terms_in_week = self.term_count * self.days_on_off.count(self.day_dict[day_key])
         total_count = 0
 
+        # { id: [이름, 계급, 근무 제외 설정 여부, 근무 제외 term index list, 편성해야 하는 근무횟수] }
         users_queue = {}
         for user_id, value in self.all_users.items():
             on, exp_term_data = self.calc_exp_users_work_term(
@@ -172,10 +211,12 @@ class AdjustedWorkSchedulerGenerator:
                 start_dt=value['exp_start_datetime'],
                 end_dt=value['exp_end_datetime']
             )
+            # user가 근무를 선 횟수
             work_count = value[f'{day_key}_work_count']
 
+            # 편성해야 하는 근무 횟수
             diff = max_work_count - work_count
-            if on:
+            if on:  # 근무 제외 시간대가 있는 경우, 근무편성 비율을 조정
                 ratio = (needed_terms_in_week - len(exp_term_data)) / needed_terms_in_week
                 diff = math.floor(diff * ratio)
 
@@ -192,13 +233,18 @@ class AdjustedWorkSchedulerGenerator:
 
             total_count += max(diff, 0)
 
+        # 편성이 가능한 근무 횟수가 schduler에 편성해야 하는 총 근무 횟수보다 적은 경우 (예외 시간대 설정으로 제외된 근무 수 때문)
+        # 근무 편성 비율을 조정
         if total_count < needed_terms_in_week:
             up = max(needed_terms_in_week // len(users_queue), 1)
             for user_id, value in users_queue.items():
                 users_queue[user_id]["work_count"] += up
 
+        # 한 명당 편성해야 하는 최소 근무 횟수
         avg_count = sum_count // len(users_queue)
 
+        # workers: 우선적으로 편성해야 하는 인원(편성해야 하는 근무 횟수가 인당 근무 수보다 적은 인원 queue)
+        # pre_worker: 예비 편성 인원
         workers, pre_workers = {}, {}
         for user_id, value in users_queue.items():
             if avg_count <= value["work_count"]:
@@ -206,6 +252,7 @@ class AdjustedWorkSchedulerGenerator:
             else:
                 pre_workers[user_id] = value
 
+        # queue를 근무 횟수가 높은 순서대로 정렬
         workers_queue = {k: v for k, v in sorted(workers.items(), key=lambda x: x[1]["work_count"], reverse=True)}
         pre_workers_queue = {k: v for k, v in
                              sorted(pre_workers.items(), key=lambda x: x[1]["work_count"], reverse=True)}
@@ -237,6 +284,15 @@ class AdjustedWorkSchedulerGenerator:
         return set(group)
 
     def generate_single_mode_worker_table(self, day_key, queue, pre_queue, worker_per_term):
+        """
+        근무 table을 생성한다.
+
+        :param
+            day_key (str): 평일/휴일 설정값 (week,day, holiday)
+            queue (dict): 편성해야 할 근무 횟수가 많은 순서대로(=근무편성 우선순위가 높은 인원 순서대로) 정렬된 근무자 queue
+            pre_queue (dict): 편성해야 할 근무 횟수가 많은 순서대로 정렬된 예비 근무자 queue
+            worker_per_term: 시간당 근무 인원수
+        """
         label = 'work_count'
         days_cnt = self.days_on_off.count(self.day_dict[day_key])
 
@@ -246,27 +302,35 @@ class AdjustedWorkSchedulerGenerator:
         work_queue = queue if isinstance(queue, dict) else dict(queue)
         pre_work_queue = pre_queue if isinstance(pre_queue, dict) else dict(pre_queue)
 
+        # table에 이미 편성되어 있는 근무자의 수
         pre_assigned_workers = self.calc_assigned_workers_cnt(work_table)
 
+        # scheduler에서 편성해야 하는 총 근무 횟수
         needed_workers = days_cnt * self.term_count * worker_per_term
         if pre_assigned_workers > 0:
             needed_workers -= (days_cnt * self.term_count)
 
         while True:
             for worker_id, value in work_queue.items():
+                # table에 편성되어 있는 근무 횟수 갱신
                 assigned_workers_in_table = self.calc_assigned_workers_cnt(work_table) - pre_assigned_workers
+                # table에 편성해야 하는 잔여 근무 횟수의 합
                 left_work_count_sum = sum(x[label] for x in work_queue.values())
 
+                # 더 이상 편성할 근무가 없는 경우
                 if assigned_workers_in_table == needed_workers or left_work_count_sum == 0:
                     setattr(self, 'table', work_table)
                     setattr(self, 'organized_schedule', organized_schedule)
                     return True
 
+                # user_id에 편성할 수 있는 최대 근무 횟수
                 work_term = max(2, needed_workers // left_work_count_sum)
-                # 남아있는 work_count가 없으면, 편성할 수 없으므로 pass
+                # user_id에게 남아있는 work_count가 없으면, 편성할 수 없으므로 pass
                 if value[label] == 0:
                     continue
 
+                # 편성해야 하는 근무 횟수의 평균값과, 편성할 수 있는 근무 횟수를 비교하여
+                # 실제로 table에 편성할 근무 횟수를 선정
                 avg_work_count = max(needed_workers // len(work_queue), 1)
                 cnt = value[label] if value[label] < avg_work_count else avg_work_count
 
@@ -278,7 +342,9 @@ class AdjustedWorkSchedulerGenerator:
                 assigned_work_count = 0
                 bias, bias_mode = 0, False
                 idx = 0
+                # 근무를 편성
                 while assigned_work_count < cnt:
+                    # 예외 시간대가 있는 경우, bias를 설정
                     exps = value["exp_terms_idx_list"]
                     if exps and idx in exps:
                         bias_mode = True
@@ -293,11 +359,12 @@ class AdjustedWorkSchedulerGenerator:
                         bias, bias_mode = 0, False
                         break
 
+                    # 근무 편성할 위치 idx(row * term_count + col)를 계산
+                    # 편성이 불가능할 경우 다음 user로 넘어가기
                     _idx = self.find_table_idx_to_assign(work_table, self.term_count, worker_per_term, start_i)
                     if _idx == -1:
                         bias, bias_mode = 0, False
                         break
-
                     row, col = _idx // self.term_count, _idx % self.term_count
 
                     workers_set = set(work_table[row][col].keys())
@@ -310,6 +377,7 @@ class AdjustedWorkSchedulerGenerator:
                     assigned_work_count += 1
                     idx = _idx + work_term
 
+                    # 전체 table에서 user가 근무 편성된 횟수를 갱신
                     if worker_id in organized_schedule:
                         organized_schedule[worker_id] += 1
                     else:
@@ -317,6 +385,7 @@ class AdjustedWorkSchedulerGenerator:
 
                 work_queue[worker_id][label] -= assigned_work_count
 
+            # 근무자 queue를 갱신 (첫 편성 이후부터는 얘비 근무자 queue도 통합)
             work_queue = {k: v for k, v in sorted(work_queue.items(), key=lambda x: x[1][label], reverse=True)}
 
             left = needed_workers - self.calc_assigned_workers_cnt(work_table)

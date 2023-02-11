@@ -11,6 +11,7 @@ from component.message import setCriticalMessageBox
 
 load_dotenv()
 
+# todo: 프로그램 db와 firebase 연결용 db 변수명 분리
 config = {
     "apiKey": os.environ.get("apiKey"),
     "authDomain": os.environ.get("authDomain"),
@@ -28,6 +29,7 @@ db = firebase.database()
 class LogInDialog(QDialog):
     def __init__(self):
         super().__init__()
+        # todo: login_user_data(로그인 정보)는 클래스변수로 관리
         self.login_user_data = None
 
         self.width = 300
